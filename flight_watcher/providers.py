@@ -18,6 +18,7 @@ class Fare:
 class Provider:
     name = "base"
     card_selectors: tuple[str, ...] = ()
+    require_checked_bag = True
 
     def url(self, origin: str, destination: str, departure: date) -> str:
         raise NotImplementedError
@@ -48,7 +49,7 @@ class Provider:
             cards = page.locator(selector)
             for index in range(await cards.count()):
                 text = await cards.nth(index).inner_text(timeout=5_000)
-                amount = extract_verified_inr(text)
+                amount = extract_verified_inr(text, require_checked_bag=self.require_checked_bag)
                 if amount is not None:
                     prices.append(amount)
         return min(prices) if prices else None
@@ -57,6 +58,7 @@ class Provider:
 class Paytm(Provider):
     name = "Paytm"
     card_selectors = ("[class*='FlightCard']", "[class*='flightCard']", "[class*='flight_list']")
+    require_checked_bag = False
 
     def url(self, origin: str, destination: str, departure: date) -> str:
         return (f"https://tickets.paytm.com/flights/flightSearch/{origin}-{destination}/"
@@ -153,9 +155,18 @@ def extract_lowest_inr(text: str) -> int | None:
     return min(values) if values else None
 
 
-def extract_verified_inr(text: str) -> int | None:
+def extract_verified_inr(text: str, require_checked_bag: bool = True) -> int | None:
     normalized = " ".join(text.lower().replace("-", " ").split())
     nonstop = any(term in normalized for term in ("non stop", "nonstop", "direct"))
+    no_checked_bag = any(
+        term in normalized
+        for term in (
+            "no check in baggage",
+            "no checked baggage",
+            "checked baggage not included",
+            "checked bag not included",
+        )
+    )
     checked_bag = any(
         term in normalized
         for term in (
@@ -166,7 +177,7 @@ def extract_verified_inr(text: str) -> int | None:
             "check in baggage included",
         )
     )
-    if not nonstop or not checked_bag:
+    if not nonstop or no_checked_bag or (require_checked_bag and not checked_bag):
         return None
     return extract_lowest_inr(text)
 
