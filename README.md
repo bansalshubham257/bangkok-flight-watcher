@@ -10,12 +10,10 @@ data can change at checkout, so alerts instruct the user to verify allowance.
 An unchanged top-three list is not resent; a message is sent when any displayed
 date or price changes.
 
-For safety, a price is accepted only when one flight-result card explicitly
-shows both non-stop/direct travel and included checked baggage. Page-wide prices
-and unconfirmed baggage fares are ignored.
-Paytm is the user-selected exception: when a Paytm card explicitly says
-non-stop but omits baggage text, checked baggage is assumed to be included.
-Paytm cards labelled "No Check-in Baggage" are always rejected.
+For safety, a price is accepted only from an individual flight-result card that
+shows non-stop/direct travel. Missing baggage text is treated as included; a
+card explicitly labelled "No Check-in Baggage", "No Checked Baggage", or an
+equivalent warning is always rejected. Page-wide prices are ignored.
 Paytm uses the supplied direct-search route for 4 adults and 1 child so the
 returned availability reflects the full travelling party.
 The other source URLs request the same party (child age 3 where supported).
