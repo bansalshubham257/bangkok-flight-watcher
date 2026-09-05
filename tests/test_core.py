@@ -19,6 +19,13 @@ def test_verified_price_requires_nonstop_and_checked_bag_on_same_card():
     assert extract_verified_inr("IndiGo Non-stop · 1 checked bag · ₹14,999") == 14_999
     assert extract_verified_inr("IndiGo Non-stop · cabin bag only · ₹12,847") is None
     assert extract_verified_inr("One stop · 1 checked bag · ₹11,500") is None
+    assert extract_verified_inr(
+        "IndiGo Non-stop · ₹28,070", require_checked_bag=False
+    ) == 28_070
+    assert extract_verified_inr(
+        "Thai AirAsia Non Stop · No Check-in Baggage · ₹15,932",
+        require_checked_bag=False,
+    ) is None
 
 
 def test_summary_only_changes_for_date_or_price(tmp_path):
