@@ -1,5 +1,6 @@
 from dataclasses import dataclass
 from pathlib import Path
+import json
 import sqlite3
 
 
@@ -28,6 +29,10 @@ class Store:
                 checked_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
             );
             CREATE TABLE IF NOT EXISTS meta (key TEXT PRIMARY KEY, value INTEGER NOT NULL);
+            CREATE TABLE IF NOT EXISTS summary_state (
+                name TEXT PRIMARY KEY,
+                payload TEXT NOT NULL
+            );
         """)
 
     def get_price(self, departure: str) -> PriceState | None:
@@ -50,6 +55,21 @@ class Store:
         return self.connection.execute(
             "SELECT departure, last_price, source FROM prices ORDER BY departure"
         ).fetchall()
+
+    def summary_changed(self, name: str, date_prices: list[tuple[str, int]]) -> bool:
+        payload = json.dumps(date_prices, separators=(",", ":"))
+        row = self.connection.execute(
+            "SELECT payload FROM summary_state WHERE name=?", (name,)
+        ).fetchone()
+        if row and row[0] == payload:
+            return False
+        self.connection.execute(
+            "INSERT INTO summary_state(name,payload) VALUES(?,?) "
+            "ON CONFLICT(name) DO UPDATE SET payload=excluded.payload",
+            (name, payload),
+        )
+        self.connection.commit()
+        return True
 
     def next_index(self, key: str, size: int, advance: int = 1) -> int:
         row = self.connection.execute("SELECT value FROM meta WHERE key=?", (key,)).fetchone()
