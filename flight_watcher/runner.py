@@ -1,4 +1,3 @@
-import asyncio
 import logging
 
 from playwright.async_api import async_playwright
@@ -43,7 +42,7 @@ class FlightWatcher:
                 fare = await provider.search(
                     self.browser, self.settings.origin, self.settings.destination, departure
                 )
-                await asyncio.to_thread(self._process, departure.isoformat(), fare.amount, fare.source, fare.url)
+                self._process(departure.isoformat(), fare.amount, fare.source, fare.url)
             except Exception as exc:
                 LOG.warning("%s failed for %s: %s", provider.name, departure, exc)
 
