@@ -49,3 +49,5 @@ python app.py
 
 Railway may charge for continuous execution and browser memory. The worker is
 not affiliated with the flight sites; comply with their terms and robots rules.
+
+Deployment source watching is enabled for updates pushed to `main`.
