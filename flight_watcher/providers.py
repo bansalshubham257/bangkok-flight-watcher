@@ -61,8 +61,9 @@ class Paytm(Provider):
     require_checked_bag = False
 
     def url(self, origin: str, destination: str, departure: date) -> str:
-        return (f"https://tickets.paytm.com/flights/flightSearch/{origin}-{destination}/"
-                f"1/0/0/E/{departure.isoformat()}")
+        return ("https://tickets.paytm.com/flights/flightSearch/"
+                f"{origin}-Bengaluru/{destination}-Bangkok/4/1/0/E/"
+                f"{departure.isoformat()}?referer=search")
 
     async def extract_verified_card_price(self, page: Page) -> int | None:
         # Paytm frequently changes/minifies card class names. Its rendered text
