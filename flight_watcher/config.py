@@ -19,6 +19,7 @@ class Settings:
     dates_per_run: int = 3
     headless: bool = True
     alert_on_first_seen: bool = True
+    diagnostic_all_providers: bool = False
 
     @classmethod
     def from_env(cls) -> "Settings":
@@ -38,6 +39,7 @@ class Settings:
             dates_per_run=int(os.getenv("DATES_PER_RUN", "3")),
             headless=flag("HEADLESS", True),
             alert_on_first_seen=flag("ALERT_ON_FIRST_SEEN", True),
+            diagnostic_all_providers=flag("DIAGNOSTIC_ALL_PROVIDERS", False),
         )
         if settings.min_delay_seconds > settings.max_delay_seconds:
             raise ValueError("MIN_DELAY_SECONDS cannot exceed MAX_DELAY_SECONDS")
