@@ -46,7 +46,8 @@ class GoogleFlights(Provider):
     name = "Google Flights"
 
     def url(self, origin: str, destination: str, departure: date) -> str:
-        query = f"Nonstop flights from {origin} to {destination} on {departure.isoformat()} one way"
+        query = (f"Nonstop flights from {origin} to {destination} on {departure.isoformat()} "
+                 "one way including one checked bag")
         return f"https://www.google.com/travel/flights?hl=en&curr=INR&q={quote(query)}"
 
 
@@ -55,7 +56,7 @@ class Kayak(Provider):
 
     def url(self, origin: str, destination: str, departure: date) -> str:
         return (f"https://www.kayak.co.in/flights/{origin}-{destination}/{departure.isoformat()}"
-                "?sort=bestflight_a&fs=stops=0")
+                "?sort=bestflight_a&fs=stops=0;bfc=1")
 
 
 class Skyscanner(Provider):
@@ -80,4 +81,6 @@ def extract_lowest_inr(text: str) -> int | None:
     return min(values) if values else None
 
 
-PROVIDERS = [GoogleFlights(), Kayak(), Skyscanner()]
+# Skyscanner does not expose a dependable checked-bag filter in its public
+# search URL, so it is excluded from baggage-inclusive monitoring.
+PROVIDERS = [GoogleFlights(), Kayak()]
