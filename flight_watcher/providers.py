@@ -172,6 +172,17 @@ class FlipkartFlights(Provider):
                 f"from={origin}&to={destination}&departureDate={departure.isoformat()}")
 
 
+class Ixigo(Provider):
+    name = "Ixigo"
+    card_selectors = ("[data-testid='flight-card']", "[class*='flight-card']", "[class*='FlightCard']")
+
+    def url(self, origin: str, destination: str, departure: date) -> str:
+        stamp = departure.strftime("%d%m%Y")
+        return ("https://www.ixigo.com/search/result/flight?"
+                f"from={origin}&to={destination}&date={stamp}&adults=4&children=1&"
+                "infants=0&class=e&source=Search+Form&stops=0")
+
+
 def extract_lowest_inr(text: str) -> int | None:
     # Flight pages usually render prices as ₹12,345 or INR 12,345. Ignore tiny
     # ancillary amounts and implausibly large values.
@@ -234,5 +245,5 @@ def extract_paytm_verified_inr(text: str) -> int | None:
 
 PROVIDERS = [
     Paytm(), MakeMyTrip(), Skyscanner(), Goibibo(), Agoda(), BookingCom(),
-    Yatra(), AmazonFlights(), FlipkartFlights(),
+    Yatra(), AmazonFlights(), FlipkartFlights(), Ixigo(),
 ]
