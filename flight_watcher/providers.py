@@ -127,8 +127,10 @@ class Agoda(Provider):
     card_selectors = ("[data-component='flight-card']", "[data-testid='flight-card']", "[class*='FlightCard']")
 
     def url(self, origin: str, destination: str, departure: date) -> str:
-        return ("https://www.agoda.com/flights/results?tripType=one-way&adults=4&children=1&childAges=3&"
-                f"departureFrom={origin}&arrivalTo={destination}&departDate={departure.isoformat()}")
+        return ("https://www.agoda.com/flights/results?"
+                f"departureFrom={origin}&departureFromType=1&arrivalTo={destination}&"
+                f"arrivalToType=0&departDate={departure.isoformat()}&searchType=1&"
+                "cabinType=Economy&adults=4&children=1&sort=8")
 
 
 class BookingCom(Provider):
@@ -154,24 +156,6 @@ class Yatra(Provider):
                 f"destinationCountry=TH&flight_depart_date={stamp}&arrivalDate=")
 
 
-class AmazonFlights(Provider):
-    name = "Amazon Flights"
-    card_selectors = ("[class*='flight-card']", "[class*='FlightCard']")
-
-    def url(self, origin: str, destination: str, departure: date) -> str:
-        return ("https://www.amazon.in/flights?tripType=oneway&adults=4&children=1&childAge=3&"
-                f"origin={origin}&destination={destination}&departureDate={departure.isoformat()}")
-
-
-class FlipkartFlights(Provider):
-    name = "Flipkart Flights"
-    card_selectors = ("[class*='flight-card']", "[class*='FlightCard']", "[data-testid='flight-card']")
-
-    def url(self, origin: str, destination: str, departure: date) -> str:
-        return ("https://www.flipkart.com/travel/flights?tripType=oneway&adults=4&children=1&childAge=3&"
-                f"from={origin}&to={destination}&departureDate={departure.isoformat()}")
-
-
 class Ixigo(Provider):
     name = "Ixigo"
     card_selectors = ("[data-testid='flight-card']", "[class*='flight-card']", "[class*='FlightCard']")
@@ -190,6 +174,22 @@ class Cheapflights(Provider):
     def url(self, origin: str, destination: str, departure: date) -> str:
         return (f"https://www.in.cheapflights.com/flight-search/{origin}-{destination}/"
                 f"{departure.isoformat()}/4adults/children-3?sort=bestflight_a&fs=stops%3D0")
+
+
+class EaseMyTrip(Provider):
+    name = "EaseMyTrip"
+    card_selectors = (
+        "[class*='flight-list']", "[class*='flightCard']", "[class*='fltResult']",
+    )
+
+    def url(self, origin: str, destination: str, departure: date) -> str:
+        stamp = departure.strftime("%d%%2F%m%%2F%Y")
+        # EaseMyTrip's supplied Bangkok search uses Don Mueang (DMK).
+        return ("https://www.easemytrip.com/flight-search/listing?"
+                f"org={origin}-Bangaluru,%20India&dept=DMK-Bangkok,%20Thailand&"
+                "adt=4&chd=1&inf=0&cabin=0&airline=Any&"
+                f"deptDT={stamp}&arrDT=undefined&isOneway=true&isDomestic=false&"
+                "CCODE=IN&curr=INR&apptype=B2C")
 
 
 def extract_lowest_inr(text: str) -> int | None:
@@ -254,5 +254,5 @@ def extract_paytm_verified_inr(text: str) -> int | None:
 
 PROVIDERS = [
     Paytm(), MakeMyTrip(), Skyscanner(), Goibibo(), Agoda(), BookingCom(),
-    Yatra(), AmazonFlights(), FlipkartFlights(), Ixigo(), Cheapflights(),
+    Yatra(), Ixigo(), Cheapflights(), EaseMyTrip(),
 ]
