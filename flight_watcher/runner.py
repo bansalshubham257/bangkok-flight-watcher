@@ -1,4 +1,5 @@
 import logging
+from datetime import date
 
 from playwright.async_api import async_playwright
 
@@ -47,23 +48,25 @@ class FlightWatcher:
                 LOG.warning("%s failed for %s: %s", provider.name, departure, exc)
 
     def _process(self, departure: str, price: int, source: str, url: str) -> None:
+        parsed_date = date.fromisoformat(departure)
+        display_date = f"{parsed_date:%A}, {parsed_date.day} {parsed_date:%B %Y}"
         previous = self.store.get_price(departure)
         if previous is None:
             self.store.save_price(departure, price, price, source)
             if price < self.settings.price_threshold:
                 self.telegram.send(
-                    f"🔥 Fare below ₹{self.settings.price_threshold:,}\nBLR → Bangkok on {departure}\n"
+                    f"🔥 Fare below ₹{self.settings.price_threshold:,}\nBLR → Bangkok on {display_date}\n"
                     f"Current price: ₹{price:,}\nSource: {source}\n{url}"
                 )
             elif self.settings.alert_on_first_seen:
                 self.telegram.send(
-                    f"✈️ Initial fare: BLR → Bangkok\n{departure}: ₹{price:,}\nSource: {source}\n{url}"
+                    f"✈️ Initial fare: BLR → Bangkok\n{display_date}: ₹{price:,}\nSource: {source}\n{url}"
                 )
             return
 
         if price < self.settings.price_threshold <= previous.last_price:
             self.telegram.send(
-                f"🔥 Fare crossed below ₹{self.settings.price_threshold:,}\nBLR → Bangkok on {departure}\n"
+                f"🔥 Fare crossed below ₹{self.settings.price_threshold:,}\nBLR → Bangkok on {display_date}\n"
                 f"Current price: ₹{price:,}\nSource: {source}\n{url}"
             )
 
@@ -71,7 +74,7 @@ class FlightWatcher:
         anchor = previous.alert_anchor
         if drop >= self.settings.drop_rupees:
             self.telegram.send(
-                f"🔻 Flight price dropped ₹{drop:,}\nBLR → Bangkok on {departure}\n"
+                f"🔻 Flight price dropped ₹{drop:,}\nBLR → Bangkok on {display_date}\n"
                 f"Was ₹{previous.alert_anchor:,}, now ₹{price:,}\nSource: {source}\n{url}"
             )
             anchor = price
