@@ -20,6 +20,7 @@ class Settings:
     headless: bool = True
     alert_on_first_seen: bool = True
     diagnostic_all_providers: bool = False
+    diagnostic_provider: str = ""
 
     @classmethod
     def from_env(cls) -> "Settings":
@@ -40,6 +41,7 @@ class Settings:
             headless=flag("HEADLESS", True),
             alert_on_first_seen=flag("ALERT_ON_FIRST_SEEN", True),
             diagnostic_all_providers=flag("DIAGNOSTIC_ALL_PROVIDERS", False),
+            diagnostic_provider=os.getenv("DIAGNOSTIC_PROVIDER", ""),
         )
         if settings.min_delay_seconds > settings.max_delay_seconds:
             raise ValueError("MIN_DELAY_SECONDS cannot exceed MAX_DELAY_SECONDS")
