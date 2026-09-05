@@ -5,7 +5,7 @@ from playwright.async_api import async_playwright
 
 from .config import Settings
 from .dates import target_dates
-from .providers import PROVIDERS
+from .providers import ALL_PROVIDERS, PROVIDERS
 from .store import Store
 from .telegram import Telegram
 
@@ -64,7 +64,7 @@ class FlightWatcher:
             if name.strip()
         }
         providers = [
-            provider for provider in PROVIDERS
+            provider for provider in ALL_PROVIDERS
             if not requested or provider.name.lower() in requested
         ]
         LOG.info("DIAGNOSTIC_START date=%s providers=%s", departure, len(providers))
