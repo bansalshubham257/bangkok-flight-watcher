@@ -92,6 +92,10 @@ class FlightWatcher:
         if not prices:
             return
         cheapest = sorted(prices, key=lambda row: row[1])[:3]
+        signature = [(departure, price) for departure, price, _source in cheapest]
+        if not self.store.summary_changed("top_three", signature):
+            LOG.info("Top 3 dates and prices unchanged; Telegram summary skipped")
+            return
         lines = ["🏆 Top 3 non-stop BLR → Bangkok fares (1 checked bag requested)"]
         for rank, (departure, price, source) in enumerate(cheapest, start=1):
             parsed = date.fromisoformat(departure)
