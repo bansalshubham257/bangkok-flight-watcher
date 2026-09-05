@@ -4,6 +4,8 @@ Playwright worker for Railway. It watches one-way economy fares from Bangalore
 (`BLR`) to Bangkok (`BKK`) for every Thursday, Friday, and Saturday in October
 2026 and sends Telegram alerts when a fare falls below ₹15,000 or drops by
 ₹500 or more from the last alerted price.
+If a fare drops by more than ₹1,500, the bot also sends every tracked date's
+latest non-stop fare and marks the cheapest date.
 
 ## How it behaves
 
