@@ -17,6 +17,8 @@ equivalent warning is always rejected. Page-wide prices are ignored.
 Paytm uses the supplied direct-search route for 4 adults and 1 child so the
 returned availability reflects the full travelling party.
 The other source URLs request the same party (child age 3 where supported).
+Yatra uses its international PWA search route; advertising and user-tracking
+parameters are intentionally excluded.
 
 ## How it behaves
 
