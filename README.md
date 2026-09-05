@@ -4,12 +4,12 @@ Playwright worker for Railway. It watches one-way economy fares from Bangalore
 (`BLR`) to Bangkok (`BKK`) for every Thursday, Friday, and Saturday in October
 2026 and sends Telegram alerts when a fare falls below ₹15,000 or drops by
 ₹500 or more from the last alerted price.
-If a fare drops by more than ₹1,500, the bot also sends every tracked date's
-latest non-stop fare and marks the cheapest date.
+Every 15 minutes, the bot sends the three cheapest latest non-stop fares with
+their weekday and date.
 
 ## How it behaves
 
-- Runs every random 300–360 seconds.
+- Starts a full scan every 15 minutes.
 - Rotates Google Flights, Kayak, and Skyscanner once per worker run.
 - Scans 3 of the 15 target dates per run in round-robin order. This keeps each
   source/date request reasonably spaced; set `DATES_PER_RUN=15` only if you have
