@@ -2,8 +2,8 @@
 
 Playwright worker for Railway. It watches one-way economy fares from Bangalore
 (`BLR`) to Bangkok (`BKK`) for every Thursday, Friday, and Saturday in October
-2026 and sends Telegram alerts for each ₹500-or-larger fall from the last
-alerted price.
+2026 and sends Telegram alerts when a fare falls below ₹15,000 or drops by
+₹500 or more from the last alerted price.
 
 ## How it behaves
 
@@ -49,5 +49,3 @@ python app.py
 
 Railway may charge for continuous execution and browser memory. The worker is
 not affiliated with the flight sites; comply with their terms and robots rules.
-
-Deployment source watching is enabled for updates pushed to `main`.
