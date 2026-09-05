@@ -20,6 +20,8 @@ The other source URLs request the same party (child age 3 where supported).
 Yatra uses its international PWA search route; advertising and user-tracking
 parameters are intentionally excluded.
 MakeMyTrip uses its international search mode with client-side rendering.
+Goibibo uses the equivalent international `/flight/search` route; advertising
+campaign and device-memory parameters are excluded.
 
 ## How it behaves
 
