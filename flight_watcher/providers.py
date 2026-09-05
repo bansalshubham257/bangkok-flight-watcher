@@ -46,7 +46,7 @@ class GoogleFlights(Provider):
     name = "Google Flights"
 
     def url(self, origin: str, destination: str, departure: date) -> str:
-        query = f"Flights from {origin} to {destination} on {departure.isoformat()} one way"
+        query = f"Nonstop flights from {origin} to {destination} on {departure.isoformat()} one way"
         return f"https://www.google.com/travel/flights?hl=en&curr=INR&q={quote(query)}"
 
 
@@ -54,7 +54,8 @@ class Kayak(Provider):
     name = "Kayak"
 
     def url(self, origin: str, destination: str, departure: date) -> str:
-        return f"https://www.kayak.co.in/flights/{origin}-{destination}/{departure.isoformat()}?sort=bestflight_a"
+        return (f"https://www.kayak.co.in/flights/{origin}-{destination}/{departure.isoformat()}"
+                "?sort=bestflight_a&fs=stops=0")
 
 
 class Skyscanner(Provider):
@@ -63,7 +64,7 @@ class Skyscanner(Provider):
     def url(self, origin: str, destination: str, departure: date) -> str:
         stamp = departure.strftime("%y%m%d")
         return (f"https://www.skyscanner.co.in/transport/flights/{origin.lower()}/"
-                f"{destination.lower()}/{stamp}/?adultsv2=1&cabinclass=economy&currency=INR")
+                f"{destination.lower()}/{stamp}/?adultsv2=1&cabinclass=economy&currency=INR&stops=direct")
 
 
 def extract_lowest_inr(text: str) -> int | None:
