@@ -46,6 +46,11 @@ class Store:
         """, (departure, price, anchor, source))
         self.connection.commit()
 
+    def all_prices(self) -> list[tuple[str, int, str]]:
+        return self.connection.execute(
+            "SELECT departure, last_price, source FROM prices ORDER BY departure"
+        ).fetchall()
+
     def next_index(self, key: str, size: int, advance: int = 1) -> int:
         row = self.connection.execute("SELECT value FROM meta WHERE key=?", (key,)).fetchone()
         current = (row[0] if row else 0) % size
