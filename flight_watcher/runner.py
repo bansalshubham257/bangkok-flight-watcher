@@ -38,22 +38,18 @@ class FlightWatcher:
         selected = [dates[(start + i) % len(dates)] for i in range(min(self.settings.dates_per_run, len(dates)))]
         LOG.info("Scanning %s with %s", ", ".join(map(str, selected)), provider.name)
 
-        send_summary = False
         for departure in selected:
             try:
                 fare = await provider.search(
                     self.browser, self.settings.origin, self.settings.destination, departure
                 )
-                send_summary |= self._process(
-                    departure.isoformat(), fare.amount, fare.source, fare.url
-                )
+                self._process(departure.isoformat(), fare.amount, fare.source, fare.url)
             except Exception as exc:
                 LOG.warning("%s failed for %s: %s", provider.name, departure, exc)
 
-        if send_summary:
-            self._send_all_dates_summary()
+        self._send_top_three_summary()
 
-    def _process(self, departure: str, price: int, source: str, url: str) -> bool:
+    def _process(self, departure: str, price: int, source: str, url: str) -> None:
         parsed_date = date.fromisoformat(departure)
         display_date = f"{parsed_date:%A}, {parsed_date.day} {parsed_date:%B %Y}"
         previous = self.store.get_price(departure)
@@ -68,7 +64,7 @@ class FlightWatcher:
                 self.telegram.send(
                     f"✈️ Initial fare: BLR → Bangkok\n{display_date}: ₹{price:,}\nSource: {source}\n{url}"
                 )
-            return False
+            return
 
         if price < self.settings.price_threshold <= previous.last_price:
             self.telegram.send(
@@ -85,18 +81,16 @@ class FlightWatcher:
             )
             anchor = price
         self.store.save_price(departure, price, anchor, source)
-        return drop > self.settings.summary_drop_rupees
 
-    def _send_all_dates_summary(self) -> None:
+    def _send_top_three_summary(self) -> None:
         prices = self.store.all_prices()
         if not prices:
             return
-        cheapest = min(prices, key=lambda row: row[1])
-        lines = ["📊 Non-stop fare summary after a drop over ₹1,500"]
-        for departure, price, source in prices:
+        cheapest = sorted(prices, key=lambda row: row[1])[:3]
+        lines = ["🏆 Top 3 cheapest non-stop BLR → Bangkok fares"]
+        for rank, (departure, price, source) in enumerate(cheapest, start=1):
             parsed = date.fromisoformat(departure)
-            marker = " ⭐ CHEAPEST" if departure == cheapest[0] else ""
             lines.append(
-                f"{parsed:%A}, {parsed.day} {parsed:%B}: ₹{price:,} ({source}){marker}"
+                f"{rank}. {parsed:%A}, {parsed.day} {parsed:%B %Y}: ₹{price:,} ({source})"
             )
         self.telegram.send("\n".join(lines))
