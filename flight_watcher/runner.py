@@ -57,8 +57,13 @@ class FlightWatcher:
 
     async def diagnose_all_providers(self) -> None:
         departure = target_dates(self.settings.year, self.settings.month)[0]
-        LOG.info("DIAGNOSTIC_START date=%s providers=%s", departure, len(PROVIDERS))
-        for provider in PROVIDERS:
+        providers = [
+            provider for provider in PROVIDERS
+            if not self.settings.diagnostic_provider
+            or provider.name.lower() == self.settings.diagnostic_provider.lower()
+        ]
+        LOG.info("DIAGNOSTIC_START date=%s providers=%s", departure, len(providers))
+        for provider in providers:
             try:
                 fare = await provider.search(
                     self.browser, self.settings.origin, self.settings.destination, departure
