@@ -13,6 +13,9 @@ date or price changes.
 For safety, a price is accepted only when one flight-result card explicitly
 shows both non-stop/direct travel and included checked baggage. Page-wide prices
 and unconfirmed baggage fares are ignored.
+Paytm is the user-selected exception: when a Paytm card explicitly says
+non-stop but omits baggage text, checked baggage is assumed to be included.
+Paytm cards labelled "No Check-in Baggage" are always rejected.
 
 ## How it behaves
 
