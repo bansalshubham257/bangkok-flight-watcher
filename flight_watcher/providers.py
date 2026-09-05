@@ -2,7 +2,6 @@ from dataclasses import dataclass
 from datetime import date
 import logging
 import re
-from urllib.parse import quote
 
 from playwright.async_api import Browser, Page
 
@@ -18,6 +17,7 @@ class Fare:
 
 class Provider:
     name = "base"
+    card_selectors: tuple[str, ...] = ()
 
     def url(self, origin: str, destination: str, departure: date) -> str:
         raise NotImplementedError
@@ -33,39 +33,82 @@ class Provider:
         try:
             await page.goto(search_url, wait_until="domcontentloaded", timeout=60_000)
             await page.wait_for_timeout(7_000)
-            text = await page.locator("body").inner_text(timeout=15_000)
-            amount = extract_lowest_inr(text)
+            amount = await self.extract_verified_card_price(page)
             if amount is None:
-                raise RuntimeError(f"No plausible INR fare found on {self.name}")
+                raise RuntimeError(
+                    f"No flight card explicitly confirmed both non-stop and checked baggage on {self.name}"
+                )
             return Fare(amount=amount, source=self.name, url=page.url)
         finally:
             await page.close()
 
+    async def extract_verified_card_price(self, page: Page) -> int | None:
+        prices: list[int] = []
+        for selector in self.card_selectors:
+            cards = page.locator(selector)
+            for index in range(await cards.count()):
+                text = await cards.nth(index).inner_text(timeout=5_000)
+                amount = extract_verified_inr(text)
+                if amount is not None:
+                    prices.append(amount)
+        return min(prices) if prices else None
 
-class GoogleFlights(Provider):
-    name = "Google Flights"
+
+class Paytm(Provider):
+    name = "Paytm"
+    card_selectors = ("[class*='FlightCard']", "[class*='flightCard']", "[class*='flight_list']")
 
     def url(self, origin: str, destination: str, departure: date) -> str:
-        query = (f"Nonstop flights from {origin} to {destination} on {departure.isoformat()} "
-                 "one way including one checked bag")
-        return f"https://www.google.com/travel/flights?hl=en&curr=INR&q={quote(query)}"
+        return (f"https://tickets.paytm.com/flights/flightSearch/{origin}-{destination}/"
+                f"1/0/0/E/{departure.isoformat()}")
 
 
-class Kayak(Provider):
-    name = "Kayak"
+class MakeMyTrip(Provider):
+    name = "MakeMyTrip"
+    card_selectors = (".listingCard", ".clusterContent", "[class*='listingCard']")
 
     def url(self, origin: str, destination: str, departure: date) -> str:
-        return (f"https://www.kayak.co.in/flights/{origin}-{destination}/{departure.isoformat()}"
-                "?sort=bestflight_a&fs=stops=0;bfc=1")
+        stamp = departure.strftime("%d/%m/%Y")
+        return ("https://www.makemytrip.com/flight/search?tripType=O&cabinClass=E&"
+                f"itinerary={origin}-{destination}-{stamp}&paxType=A-1_C-0_I-0")
+
+
+class Goibibo(Provider):
+    name = "Goibibo"
+    card_selectors = ("[data-testid='flight-card']", "[class*='FlightCard']", "[class*='CardWrap']")
+
+    def url(self, origin: str, destination: str, departure: date) -> str:
+        return (f"https://www.goibibo.com/flights/air-{origin}-{destination}-"
+                f"{departure.strftime('%Y%m%d')}--1-0-0-E-D/")
 
 
 class Skyscanner(Provider):
     name = "Skyscanner"
+    card_selectors = ("[data-testid='itinerary-card']", "[class*='FlightsTicket']")
 
     def url(self, origin: str, destination: str, departure: date) -> str:
         stamp = departure.strftime("%y%m%d")
         return (f"https://www.skyscanner.co.in/transport/flights/{origin.lower()}/"
                 f"{destination.lower()}/{stamp}/?adultsv2=1&cabinclass=economy&currency=INR&stops=direct")
+
+
+class Agoda(Provider):
+    name = "Agoda"
+    card_selectors = ("[data-component='flight-card']", "[data-testid='flight-card']", "[class*='FlightCard']")
+
+    def url(self, origin: str, destination: str, departure: date) -> str:
+        return ("https://www.agoda.com/flights/results?tripType=one-way&adults=1&children=0&"
+                f"departureFrom={origin}&arrivalTo={destination}&departDate={departure.isoformat()}")
+
+
+class BookingCom(Provider):
+    name = "Booking.com"
+    card_selectors = ("[data-testid='flight-card']", "[data-testid='searchresults_card']")
+
+    def url(self, origin: str, destination: str, departure: date) -> str:
+        return ("https://www.booking.com/flights/index.en-gb.html?type=ONEWAY&cabinClass=ECONOMY&"
+                f"adults=1&children=&from={origin}.AIRPORT&to={destination}.AIRPORT&"
+                f"depart={departure.isoformat()}&currency=INR")
 
 
 def extract_lowest_inr(text: str) -> int | None:
@@ -81,6 +124,22 @@ def extract_lowest_inr(text: str) -> int | None:
     return min(values) if values else None
 
 
-# Skyscanner does not expose a dependable checked-bag filter in its public
-# search URL, so it is excluded from baggage-inclusive monitoring.
-PROVIDERS = [GoogleFlights(), Kayak()]
+def extract_verified_inr(text: str) -> int | None:
+    normalized = " ".join(text.lower().replace("-", " ").split())
+    nonstop = any(term in normalized for term in ("non stop", "nonstop", "direct"))
+    checked_bag = any(
+        term in normalized
+        for term in (
+            "checked bag included",
+            "checked baggage included",
+            "1 checked bag",
+            "1 check in bag",
+            "check in baggage included",
+        )
+    )
+    if not nonstop or not checked_bag:
+        return None
+    return extract_lowest_inr(text)
+
+
+PROVIDERS = [Paytm(), MakeMyTrip(), Skyscanner(), Goibibo(), Agoda(), BookingCom()]
