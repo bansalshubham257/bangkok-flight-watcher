@@ -50,11 +50,22 @@ class FlightWatcher:
         previous = self.store.get_price(departure)
         if previous is None:
             self.store.save_price(departure, price, price, source)
-            if self.settings.alert_on_first_seen:
+            if price < self.settings.price_threshold:
+                self.telegram.send(
+                    f"🔥 Fare below ₹{self.settings.price_threshold:,}\nBLR → Bangkok on {departure}\n"
+                    f"Current price: ₹{price:,}\nSource: {source}\n{url}"
+                )
+            elif self.settings.alert_on_first_seen:
                 self.telegram.send(
                     f"✈️ Initial fare: BLR → Bangkok\n{departure}: ₹{price:,}\nSource: {source}\n{url}"
                 )
             return
+
+        if price < self.settings.price_threshold <= previous.last_price:
+            self.telegram.send(
+                f"🔥 Fare crossed below ₹{self.settings.price_threshold:,}\nBLR → Bangkok on {departure}\n"
+                f"Current price: ₹{price:,}\nSource: {source}\n{url}"
+            )
 
         drop = previous.alert_anchor - price
         anchor = previous.alert_anchor
