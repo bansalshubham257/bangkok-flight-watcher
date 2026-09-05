@@ -103,8 +103,11 @@ class Goibibo(Provider):
     card_selectors = ("[data-testid='flight-card']", "[class*='FlightCard']", "[class*='CardWrap']")
 
     def url(self, origin: str, destination: str, departure: date) -> str:
-        return (f"https://www.goibibo.com/flights/air-{origin}-{destination}-"
-                f"{departure.strftime('%Y%m%d')}--4-1-0-E-D/")
+        stamp = departure.strftime("%d%%2F%m%%2F%Y")
+        return ("https://www.goibibo.com/flight/search?"
+                f"itinerary={origin}-{destination}-{stamp}&tripType=O&cabinClass=E&"
+                "paxType=A-4_C-1_I-0&intl=true&msv=2&"
+                "msExperiments=showFare%3Atrue&lang=eng&ssr=false")
 
 
 class Skyscanner(Provider):
