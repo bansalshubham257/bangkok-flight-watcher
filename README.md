@@ -26,9 +26,9 @@ campaign and device-memory parameters are excluded.
 ## How it behaves
 
 - Starts a full scan every 15 minutes.
-- Rotates Paytm, MakeMyTrip, Skyscanner, Goibibo, Agoda, Booking.com, Yatra,
-  Ixigo, Cheapflights, and EaseMyTrip. Amazon and Flipkart are not used.
-  Login-only or unverifiable sources are skipped
+- Production alerts rotate Ixigo and Cheapflights, the sources that returned
+  comparable per-passenger prices on Railway. Other configured sources remain
+  available for diagnostics. Amazon and Flipkart are not used.
   safely.
 - Scans 3 of the 15 target dates per run in round-robin order. This keeps each
   source/date request reasonably spaced; set `DATES_PER_RUN=15` only if you have
