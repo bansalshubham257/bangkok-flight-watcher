@@ -5,7 +5,8 @@ Playwright worker for Railway. It watches one-way economy fares from Bangalore
 2026 and sends Telegram alerts when a fare falls below ₹15,000 or drops by
 ₹500 or more from the last alerted price.
 Every 15 minutes, the bot sends the three cheapest latest non-stop fares with
-their weekday and date.
+one checked bag requested, including their weekday and date. Fare-site baggage
+data can change at checkout, so alerts instruct the user to verify allowance.
 
 ## How it behaves
 
