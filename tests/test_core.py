@@ -2,6 +2,7 @@ from datetime import date
 
 from flight_watcher.dates import target_dates
 from flight_watcher.providers import extract_lowest_inr
+from flight_watcher.store import Store
 
 
 def test_october_2026_dates():
@@ -12,3 +13,12 @@ def test_october_2026_dates():
 
 def test_price_parser():
     assert extract_lowest_inr("from ₹12,499 other INR 10,250 and ₹999") == 10_250
+
+
+def test_summary_only_changes_for_date_or_price(tmp_path):
+    store = Store(f"sqlite:///{tmp_path / 'prices.db'}")
+    assert store.summary_changed("top_three", [("2026-10-01", 14_000)])
+    assert not store.summary_changed("top_three", [("2026-10-01", 14_000)])
+    assert store.summary_changed("top_three", [("2026-10-01", 13_999)])
+    assert store.summary_changed("top_three", [("2026-10-02", 13_999)])
+    store.close()
