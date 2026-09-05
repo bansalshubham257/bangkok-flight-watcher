@@ -80,7 +80,7 @@ class MakeMyTrip(Provider):
     def url(self, origin: str, destination: str, departure: date) -> str:
         stamp = departure.strftime("%d/%m/%Y")
         return ("https://www.makemytrip.com/flight/search?tripType=O&cabinClass=E&"
-                f"itinerary={origin}-{destination}-{stamp}&paxType=A-1_C-0_I-0")
+                f"itinerary={origin}-{destination}-{stamp}&paxType=A-4_C-1_I-0")
 
 
 class Goibibo(Provider):
@@ -89,7 +89,7 @@ class Goibibo(Provider):
 
     def url(self, origin: str, destination: str, departure: date) -> str:
         return (f"https://www.goibibo.com/flights/air-{origin}-{destination}-"
-                f"{departure.strftime('%Y%m%d')}--1-0-0-E-D/")
+                f"{departure.strftime('%Y%m%d')}--4-1-0-E-D/")
 
 
 class Skyscanner(Provider):
@@ -99,7 +99,8 @@ class Skyscanner(Provider):
     def url(self, origin: str, destination: str, departure: date) -> str:
         stamp = departure.strftime("%y%m%d")
         return (f"https://www.skyscanner.co.in/transport/flights/{origin.lower()}/"
-                f"{destination.lower()}/{stamp}/?adultsv2=1&cabinclass=economy&currency=INR&stops=direct")
+                f"{destination.lower()}/{stamp}/?adultsv2=4&childrenv2=3&"
+                "cabinclass=economy&currency=INR&stops=direct")
 
 
 class Agoda(Provider):
@@ -107,7 +108,7 @@ class Agoda(Provider):
     card_selectors = ("[data-component='flight-card']", "[data-testid='flight-card']", "[class*='FlightCard']")
 
     def url(self, origin: str, destination: str, departure: date) -> str:
-        return ("https://www.agoda.com/flights/results?tripType=one-way&adults=1&children=0&"
+        return ("https://www.agoda.com/flights/results?tripType=one-way&adults=4&children=1&childAges=3&"
                 f"departureFrom={origin}&arrivalTo={destination}&departDate={departure.isoformat()}")
 
 
@@ -117,7 +118,7 @@ class BookingCom(Provider):
 
     def url(self, origin: str, destination: str, departure: date) -> str:
         return ("https://www.booking.com/flights/index.en-gb.html?type=ONEWAY&cabinClass=ECONOMY&"
-                f"adults=1&children=&from={origin}.AIRPORT&to={destination}.AIRPORT&"
+                f"adults=4&children=3&from={origin}.AIRPORT&to={destination}.AIRPORT&"
                 f"depart={departure.isoformat()}&currency=INR")
 
 
@@ -129,7 +130,7 @@ class Yatra(Provider):
         stamp = departure.strftime("%d/%m/%Y")
         return ("https://flight.yatra.com/air-search-ui/dom2/trigger?type=O&viewName=normal&"
                 f"origin={origin}&destination={destination}&flight_depart_date={stamp}&"
-                "adt=1&chd=0&inf=0&class=Economy&source=fresco-home")
+                "adt=4&chd=1&inf=0&class=Economy&source=fresco-home")
 
 
 class AmazonFlights(Provider):
@@ -137,7 +138,7 @@ class AmazonFlights(Provider):
     card_selectors = ("[class*='flight-card']", "[class*='FlightCard']")
 
     def url(self, origin: str, destination: str, departure: date) -> str:
-        return ("https://www.amazon.in/flights?tripType=oneway&adults=1&children=0&"
+        return ("https://www.amazon.in/flights?tripType=oneway&adults=4&children=1&childAge=3&"
                 f"origin={origin}&destination={destination}&departureDate={departure.isoformat()}")
 
 
@@ -146,7 +147,7 @@ class FlipkartFlights(Provider):
     card_selectors = ("[class*='flight-card']", "[class*='FlightCard']", "[data-testid='flight-card']")
 
     def url(self, origin: str, destination: str, departure: date) -> str:
-        return ("https://www.flipkart.com/travel/flights?tripType=oneway&adults=1&children=0&"
+        return ("https://www.flipkart.com/travel/flights?tripType=oneway&adults=4&children=1&childAge=3&"
                 f"from={origin}&to={destination}&departureDate={departure.isoformat()}")
 
 
