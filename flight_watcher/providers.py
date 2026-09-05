@@ -91,9 +91,11 @@ class MakeMyTrip(Provider):
     card_selectors = (".listingCard", ".clusterContent", "[class*='listingCard']")
 
     def url(self, origin: str, destination: str, departure: date) -> str:
-        stamp = departure.strftime("%d/%m/%Y")
-        return ("https://www.makemytrip.com/flight/search?tripType=O&cabinClass=E&"
-                f"itinerary={origin}-{destination}-{stamp}&paxType=A-4_C-1_I-0")
+        stamp = departure.strftime("%d%%2F%m%%2F%Y")
+        return ("https://www.makemytrip.com/flight/search?"
+                f"itinerary={origin}-{destination}-{stamp}&tripType=O&cabinClass=E&"
+                "paxType=A-4_C-1_I-0&intl=true&msv=2&"
+                "msExperiments=showFare%3Atrue&lang=eng&ssr=false")
 
 
 class Goibibo(Provider):
