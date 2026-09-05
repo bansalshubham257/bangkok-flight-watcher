@@ -18,7 +18,7 @@ class Fare:
 class Provider:
     name = "base"
     card_selectors: tuple[str, ...] = ()
-    require_checked_bag = True
+    require_checked_bag = False
 
     def url(self, origin: str, destination: str, departure: date) -> str:
         raise NotImplementedError
@@ -36,9 +36,7 @@ class Provider:
             await page.wait_for_timeout(7_000)
             amount = await self.extract_verified_card_price(page)
             if amount is None:
-                raise RuntimeError(
-                    f"No flight card explicitly confirmed both non-stop and checked baggage on {self.name}"
-                )
+                raise RuntimeError(f"No qualifying non-stop flight card found on {self.name}")
             return Fare(amount=amount, source=self.name, url=page.url)
         finally:
             await page.close()
@@ -184,6 +182,8 @@ def extract_verified_inr(text: str, require_checked_bag: bool = True) -> int | N
             "no checked baggage",
             "checked baggage not included",
             "checked bag not included",
+            "cabin bag only",
+            "hand baggage only",
         )
     )
     checked_bag = any(
