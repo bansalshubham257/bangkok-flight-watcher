@@ -1,7 +1,11 @@
 from datetime import date
 
 from flight_watcher.dates import target_dates
-from flight_watcher.providers import extract_lowest_inr, extract_verified_inr
+from flight_watcher.providers import (
+    extract_lowest_inr,
+    extract_paytm_verified_inr,
+    extract_verified_inr,
+)
 from flight_watcher.store import Store
 
 
@@ -26,6 +30,24 @@ def test_verified_price_requires_nonstop_and_checked_bag_on_same_card():
         "Thai AirAsia Non Stop · No Check-in Baggage · ₹15,932",
         require_checked_bag=False,
     ) is None
+
+
+def test_paytm_rendered_text_rejects_no_baggage_card():
+    text = """Thu, 15 Oct
+₹16,490
+Thai AirAsia
+11:20 PM
+3h 50m
+Non Stop
+No Check-in Baggage
+₹15,932
+Thai Airways
+12:55 AM
+3h 55m
+Non Stop
+₹28,166
+"""
+    assert extract_paytm_verified_inr(text) == 28_166
 
 
 def test_summary_only_changes_for_date_or_price(tmp_path):
