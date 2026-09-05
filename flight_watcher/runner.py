@@ -57,10 +57,14 @@ class FlightWatcher:
 
     async def diagnose_all_providers(self) -> None:
         departure = target_dates(self.settings.year, self.settings.month)[0]
+        requested = {
+            name.strip().lower()
+            for name in self.settings.diagnostic_provider.split(",")
+            if name.strip()
+        }
         providers = [
             provider for provider in PROVIDERS
-            if not self.settings.diagnostic_provider
-            or provider.name.lower() == self.settings.diagnostic_provider.lower()
+            if not requested or provider.name.lower() in requested
         ]
         LOG.info("DIAGNOSTIC_START date=%s providers=%s", departure, len(providers))
         for provider in providers:
