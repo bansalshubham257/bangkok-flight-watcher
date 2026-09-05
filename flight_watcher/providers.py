@@ -117,8 +117,9 @@ class Skyscanner(Provider):
     def url(self, origin: str, destination: str, departure: date) -> str:
         stamp = departure.strftime("%y%m%d")
         return (f"https://www.skyscanner.co.in/transport/flights/{origin.lower()}/"
-                f"{destination.lower()}/{stamp}/?adultsv2=4&childrenv2=3&"
-                "cabinclass=economy&currency=INR&stops=direct")
+                f"bkkt/{stamp}/?adultsv2=4&cabinclass=economy&childrenv2=3&"
+                "ref=home&rtn=0&preferdirects=true&outboundaltsenabled=false&"
+                "inboundaltsenabled=false&currency=INR")
 
 
 class Agoda(Provider):
