@@ -46,6 +46,9 @@ class FlightWatcher:
                 self._process(departure.isoformat(), fare.amount, fare.source, fare.url)
             except Exception as exc:
                 LOG.warning("%s failed for %s: %s", provider.name, departure, exc)
+                if "ERR_HTTP2_PROTOCOL_ERROR" in str(exc):
+                    LOG.warning("%s is blocked at network level; skipping remaining dates", provider.name)
+                    break
 
         self._send_top_three_summary()
 
