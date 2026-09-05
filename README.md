@@ -18,6 +18,7 @@ non-stop but omits baggage text, checked baggage is assumed to be included.
 Paytm cards labelled "No Check-in Baggage" are always rejected.
 Paytm uses the supplied direct-search route for 4 adults and 1 child so the
 returned availability reflects the full travelling party.
+The other source URLs request the same party (child age 3 where supported).
 
 ## How it behaves
 
