@@ -111,6 +111,35 @@ class BookingCom(Provider):
                 f"depart={departure.isoformat()}&currency=INR")
 
 
+class Yatra(Provider):
+    name = "Yatra"
+    card_selectors = ("[class*='flight-card']", "[class*='flightItem']", "[class*='result-set']")
+
+    def url(self, origin: str, destination: str, departure: date) -> str:
+        stamp = departure.strftime("%d/%m/%Y")
+        return ("https://flight.yatra.com/air-search-ui/dom2/trigger?type=O&viewName=normal&"
+                f"origin={origin}&destination={destination}&flight_depart_date={stamp}&"
+                "adt=1&chd=0&inf=0&class=Economy&source=fresco-home")
+
+
+class AmazonFlights(Provider):
+    name = "Amazon Flights"
+    card_selectors = ("[class*='flight-card']", "[class*='FlightCard']")
+
+    def url(self, origin: str, destination: str, departure: date) -> str:
+        return ("https://www.amazon.in/flights?tripType=oneway&adults=1&children=0&"
+                f"origin={origin}&destination={destination}&departureDate={departure.isoformat()}")
+
+
+class FlipkartFlights(Provider):
+    name = "Flipkart Flights"
+    card_selectors = ("[class*='flight-card']", "[class*='FlightCard']", "[data-testid='flight-card']")
+
+    def url(self, origin: str, destination: str, departure: date) -> str:
+        return ("https://www.flipkart.com/travel/flights?tripType=oneway&adults=1&children=0&"
+                f"from={origin}&to={destination}&departureDate={departure.isoformat()}")
+
+
 def extract_lowest_inr(text: str) -> int | None:
     # Flight pages usually render prices as ₹12,345 or INR 12,345. Ignore tiny
     # ancillary amounts and implausibly large values.
@@ -142,4 +171,7 @@ def extract_verified_inr(text: str) -> int | None:
     return extract_lowest_inr(text)
 
 
-PROVIDERS = [Paytm(), MakeMyTrip(), Skyscanner(), Goibibo(), Agoda(), BookingCom()]
+PROVIDERS = [
+    Paytm(), MakeMyTrip(), Skyscanner(), Goibibo(), Agoda(), BookingCom(),
+    Yatra(), AmazonFlights(), FlipkartFlights(),
+]
