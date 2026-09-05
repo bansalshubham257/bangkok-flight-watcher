@@ -50,7 +50,12 @@ class Provider:
                 amount = extract_verified_inr(text, require_checked_bag=self.require_checked_bag)
                 if amount is not None:
                     prices.append(amount)
-        return min(prices) if prices else None
+        if prices:
+            return min(prices)
+        # CSS class names on travel sites are frequently generated. Fall back
+        # to rendered text segmented by fare lines, never to a page-wide min.
+        body = await page.locator("body").inner_text(timeout=15_000)
+        return extract_paytm_verified_inr(body)
 
 
 class Paytm(Provider):
