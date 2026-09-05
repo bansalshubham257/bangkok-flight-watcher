@@ -1,7 +1,7 @@
 from datetime import date
 
 from flight_watcher.dates import target_dates
-from flight_watcher.providers import extract_lowest_inr
+from flight_watcher.providers import extract_lowest_inr, extract_verified_inr
 from flight_watcher.store import Store
 
 
@@ -13,6 +13,12 @@ def test_october_2026_dates():
 
 def test_price_parser():
     assert extract_lowest_inr("from ₹12,499 other INR 10,250 and ₹999") == 10_250
+
+
+def test_verified_price_requires_nonstop_and_checked_bag_on_same_card():
+    assert extract_verified_inr("IndiGo Non-stop · 1 checked bag · ₹14,999") == 14_999
+    assert extract_verified_inr("IndiGo Non-stop · cabin bag only · ₹12,847") is None
+    assert extract_verified_inr("One stop · 1 checked bag · ₹11,500") is None
 
 
 def test_summary_only_changes_for_date_or_price(tmp_path):
