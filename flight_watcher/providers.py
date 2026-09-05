@@ -141,9 +141,11 @@ class Yatra(Provider):
 
     def url(self, origin: str, destination: str, departure: date) -> str:
         stamp = departure.strftime("%d/%m/%Y")
-        return ("https://flight.yatra.com/air-search-ui/dom2/trigger?type=O&viewName=normal&"
-                f"origin={origin}&destination={destination}&flight_depart_date={stamp}&"
-                "adt=4&chd=1&inf=0&class=Economy&source=fresco-home")
+        return ("https://flight.yatra.com/air-search-ui/pwaint_flight/trigger?flex=0&"
+                "viewName=normal&source=fresco-flights&type=O&class=Economy&"
+                "ADT=4&CHD=1&INF=0&noOfSegments=1&"
+                f"origin={origin}&originCountry=IN&destination={destination}&"
+                f"destinationCountry=TH&flight_depart_date={stamp}&arrivalDate=")
 
 
 class AmazonFlights(Provider):
