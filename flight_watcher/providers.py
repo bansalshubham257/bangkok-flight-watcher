@@ -252,7 +252,11 @@ def extract_paytm_verified_inr(text: str) -> int | None:
     return min(prices) if prices else None
 
 
-PROVIDERS = [
+ALL_PROVIDERS = [
     Paytm(), MakeMyTrip(), Skyscanner(), Goibibo(), Agoda(), BookingCom(),
     Yatra(), Ixigo(), Cheapflights(), EaseMyTrip(),
 ]
+
+# Only sources that have produced comparable per-passenger prices on Railway
+# belong in the alert rotation. Other providers remain available to diagnostics.
+PROVIDERS = [Ixigo(), Cheapflights()]
