@@ -57,8 +57,10 @@ class FlightWatcher:
             self.store.save_price(departure, price, price, source)
             if price < self.settings.price_threshold:
                 self.telegram.send(
-                    f"🔥 Fare below ₹{self.settings.price_threshold:,}\nBLR → Bangkok on {display_date}\n"
+                    f"🔥 Non-stop fare below ₹{self.settings.price_threshold:,}\n"
+                    f"BLR → Bangkok on {display_date}\n"
                     f"Current price: ₹{price:,}\nSource: {source}\n{url}"
+                    "\nChecked bag requested—verify allowance before booking."
                 )
             elif self.settings.alert_on_first_seen:
                 self.telegram.send(
@@ -68,8 +70,10 @@ class FlightWatcher:
 
         if price < self.settings.price_threshold <= previous.last_price:
             self.telegram.send(
-                f"🔥 Fare crossed below ₹{self.settings.price_threshold:,}\nBLR → Bangkok on {display_date}\n"
+                f"🔥 Non-stop fare crossed below ₹{self.settings.price_threshold:,}\n"
+                f"BLR → Bangkok on {display_date}\n"
                 f"Current price: ₹{price:,}\nSource: {source}\n{url}"
+                "\nChecked bag requested—verify allowance before booking."
             )
 
         drop = previous.alert_anchor - price
@@ -78,6 +82,7 @@ class FlightWatcher:
             self.telegram.send(
                 f"🔻 Flight price dropped ₹{drop:,}\nBLR → Bangkok on {display_date}\n"
                 f"Was ₹{previous.alert_anchor:,}, now ₹{price:,}\nSource: {source}\n{url}"
+                "\nNon-stop + checked bag requested; verify before booking."
             )
             anchor = price
         self.store.save_price(departure, price, anchor, source)
@@ -87,7 +92,7 @@ class FlightWatcher:
         if not prices:
             return
         cheapest = sorted(prices, key=lambda row: row[1])[:3]
-        lines = ["🏆 Top 3 cheapest non-stop BLR → Bangkok fares"]
+        lines = ["🏆 Top 3 non-stop BLR → Bangkok fares (1 checked bag requested)"]
         for rank, (departure, price, source) in enumerate(cheapest, start=1):
             parsed = date.fromisoformat(departure)
             lines.append(
