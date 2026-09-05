@@ -59,6 +59,7 @@ class Paytm(Provider):
     name = "Paytm"
     card_selectors = ("[class*='FlightCard']", "[class*='flightCard']", "[class*='flight_list']")
     require_checked_bag = False
+    debugged_page = False
 
     def url(self, origin: str, destination: str, departure: date) -> str:
         return ("https://tickets.paytm.com/flights/flightSearch/"
@@ -70,7 +71,16 @@ class Paytm(Provider):
         # remains structured: each card's price follows its stops and baggage
         # lines. Associate each price only with a tight preceding line window.
         text = await page.locator("body").inner_text(timeout=15_000)
-        return extract_paytm_verified_inr(text)
+        amount = extract_paytm_verified_inr(text)
+        if amount is None and not self.debugged_page:
+            self.debugged_page = True
+            LOG.info(
+                "Paytm diagnostic url=%s title=%s body=%r",
+                page.url,
+                await page.title(),
+                text[:2_000],
+            )
+        return amount
 
 
 class MakeMyTrip(Provider):
