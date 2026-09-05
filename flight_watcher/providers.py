@@ -64,6 +64,13 @@ class Paytm(Provider):
         return (f"https://tickets.paytm.com/flights/flightSearch/{origin}-{destination}/"
                 f"1/0/0/E/{departure.isoformat()}")
 
+    async def extract_verified_card_price(self, page: Page) -> int | None:
+        # Paytm frequently changes/minifies card class names. Its rendered text
+        # remains structured: each card's price follows its stops and baggage
+        # lines. Associate each price only with a tight preceding line window.
+        text = await page.locator("body").inner_text(timeout=15_000)
+        return extract_paytm_verified_inr(text)
+
 
 class MakeMyTrip(Provider):
     name = "MakeMyTrip"
@@ -180,6 +187,24 @@ def extract_verified_inr(text: str, require_checked_bag: bool = True) -> int | N
     if not nonstop or no_checked_bag or (require_checked_bag and not checked_bag):
         return None
     return extract_lowest_inr(text)
+
+
+def extract_paytm_verified_inr(text: str) -> int | None:
+    lines = [line.strip() for line in text.splitlines() if line.strip()]
+    prices: list[int] = []
+    previous_price_index = -1
+    for index, line in enumerate(lines):
+        amount = extract_lowest_inr(line)
+        if amount is None:
+            continue
+        # Paytm renders each fare at the end of its card. Starting after the
+        # previous rupee line keeps baggage text from one card out of the next.
+        context = " ".join(lines[previous_price_index + 1: index + 1])
+        verified = extract_verified_inr(context, require_checked_bag=False)
+        if verified is not None:
+            prices.append(amount)
+        previous_price_index = index
+    return min(prices) if prices else None
 
 
 PROVIDERS = [
