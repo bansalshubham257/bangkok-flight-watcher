@@ -27,8 +27,8 @@ campaign and device-memory parameters are excluded.
 
 - Starts a full scan every 15 minutes.
 - Rotates Paytm, MakeMyTrip, Skyscanner, Goibibo, Agoda, Booking.com, Yatra,
-  Amazon Flights, and Flipkart Flights. Login-only or unverifiable sources are
-  skipped safely.
+  Amazon Flights, Flipkart Flights, and Ixigo. Login-only or unverifiable
+  sources are skipped safely.
 - Scans 3 of the 15 target dates per run in round-robin order. This keeps each
   source/date request reasonably spaced; set `DATES_PER_RUN=15` only if you have
   permission and accept the higher block risk.
