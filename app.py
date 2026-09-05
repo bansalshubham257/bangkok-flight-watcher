@@ -23,6 +23,9 @@ async def main() -> None:
 
     await watcher.start()
     try:
+        if settings.diagnostic_all_providers:
+            await watcher.diagnose_all_providers()
+            return
         while not stop.is_set():
             cycle_started = time.monotonic()
             try:
