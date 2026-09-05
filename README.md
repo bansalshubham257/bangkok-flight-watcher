@@ -26,8 +26,9 @@ campaign and device-memory parameters are excluded.
 ## How it behaves
 
 - Starts a full scan every 15 minutes.
-- Production alerts use Cheapflights, the source that consistently returned
-  comparable prices on Railway. Other configured sources remain
+- Production alerts rotate Cheapflights and EaseMyTrip. EaseMyTrip's displayed
+  five-traveller total is divided by five for an approximate per-person fare.
+  Other configured sources remain
   available for diagnostics. Amazon and Flipkart are not used.
   safely.
 - Scans 3 of the 15 target dates per run in round-robin order. This keeps each
