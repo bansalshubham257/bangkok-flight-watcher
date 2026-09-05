@@ -16,6 +16,8 @@ and unconfirmed baggage fares are ignored.
 Paytm is the user-selected exception: when a Paytm card explicitly says
 non-stop but omits baggage text, checked baggage is assumed to be included.
 Paytm cards labelled "No Check-in Baggage" are always rejected.
+Paytm uses the supplied direct-search route for 4 adults and 1 child so the
+returned availability reflects the full travelling party.
 
 ## How it behaves
 
