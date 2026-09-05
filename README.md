@@ -10,6 +10,10 @@ data can change at checkout, so alerts instruct the user to verify allowance.
 An unchanged top-three list is not resent; a message is sent when any displayed
 date or price changes.
 
+For safety, a price is accepted only when one flight-result card explicitly
+shows both non-stop/direct travel and included checked baggage. Page-wide prices
+and unconfirmed baggage fares are ignored.
+
 ## How it behaves
 
 - Starts a full scan every 15 minutes.
