@@ -7,6 +7,8 @@ Playwright worker for Railway. It watches one-way economy fares from Bangalore
 Every 15 minutes, the bot sends the three cheapest latest non-stop fares with
 one checked bag requested, including their weekday and date. Fare-site baggage
 data can change at checkout, so alerts instruct the user to verify allowance.
+An unchanged top-three list is not resent; a message is sent when any displayed
+date or price changes.
 
 ## How it behaves
 
