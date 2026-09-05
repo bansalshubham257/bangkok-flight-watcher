@@ -52,6 +52,22 @@ class FlightWatcher:
 
         self._send_top_three_summary()
 
+    async def diagnose_all_providers(self) -> None:
+        departure = target_dates(self.settings.year, self.settings.month)[0]
+        LOG.info("DIAGNOSTIC_START date=%s providers=%s", departure, len(PROVIDERS))
+        for provider in PROVIDERS:
+            try:
+                fare = await provider.search(
+                    self.browser, self.settings.origin, self.settings.destination, departure
+                )
+                LOG.info(
+                    "DIAGNOSTIC_OK provider=%s price=%s url=%s",
+                    provider.name, fare.amount, fare.url,
+                )
+            except Exception as exc:
+                LOG.warning("DIAGNOSTIC_FAIL provider=%s reason=%s", provider.name, exc)
+        LOG.info("DIAGNOSTIC_DONE")
+
     def _process(self, departure: str, price: int, source: str, url: str) -> None:
         parsed_date = date.fromisoformat(departure)
         display_date = f"{parsed_date:%A}, {parsed_date.day} {parsed_date:%B %Y}"
