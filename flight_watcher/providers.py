@@ -19,6 +19,7 @@ class Provider:
     name = "base"
     card_selectors: tuple[str, ...] = ()
     require_checked_bag = False
+    load_wait_ms: int = 7_000
 
     def url(self, origin: str, destination: str, departure: date) -> str:
         raise NotImplementedError
@@ -33,8 +34,9 @@ class Provider:
         search_url = self.url(origin, destination, departure)
         try:
             await page.goto(search_url, wait_until="domcontentloaded", timeout=60_000)
-            await page.wait_for_timeout(7_000)
+            await page.wait_for_timeout(self.load_wait_ms)
             await self.dismiss_overlays(page)
+            await self.wait_for_results(page)
             amount = await self.extract_verified_card_price(page)
             if amount is None:
                 raise RuntimeError(f"No qualifying non-stop flight card found on {self.name}")
@@ -44,6 +46,10 @@ class Provider:
 
     async def dismiss_overlays(self, page: Page) -> None:
         """Hook for provider-specific popups. Never raises."""
+        return None
+
+    async def wait_for_results(self, page: Page) -> None:
+        """Hook to poll for late-loading results. Never refreshes. Never raises."""
         return None
 
     async def extract_verified_card_price(self, page: Page) -> int | None:
@@ -188,12 +194,54 @@ class BookingCom(Provider):
 class Yatra(Provider):
     name = "Yatra"
     card_selectors = ("[class*='flight-card']", "[class*='flightItem']", "[class*='result-set']")
+    # Yatra shows a challenge/loader for ~25-30s before results render.
+    # Never refresh mid-wait: that restarts the challenge timer.
+    load_wait_ms: int = 32_000
+
+    async def wait_for_results(self, page: Page) -> None:
+        # Poll only (no refresh) until result cards render or timeout.
+        for _ in range(23):
+            try:
+                body = await page.locator("body").inner_text(timeout=5_000)
+            except Exception:
+                await page.wait_for_timeout(2_000)
+                continue
+            normalized = body.lower().replace("-", " ")
+            if "non stop" in normalized or "nonstop" in normalized:
+                LOG.info("Yatra results detected")
+                return None
+            await page.wait_for_timeout(2_000)
+        LOG.warning("Yatra results not detected after extended wait")
+        return None
+
+    async def extract_verified_card_price(self, page: Page) -> int | None:
+        # Yatra renders prices as bare numbers (21,309 with no ₹ in text), each
+        # card starting at "Flight Details" and ending at "View Fares"/"Book".
+        # Accept a bare price only inside a card that shows non-stop travel.
+        # Note: "No Cost EMI" is a payment offer, not a baggage exclusion.
+        text = await page.locator("body").inner_text(timeout=15_000)
+        prices: list[int] = []
+        for card in re.split(r"flight details", text, flags=re.IGNORECASE):
+            card = re.split(r"view fares|\nbook\n", card, flags=re.IGNORECASE)[0]
+            normalized = " ".join(card.lower().replace("-", " ").split())
+            if "non stop" not in normalized and "nonstop" not in normalized:
+                continue
+            if any(term in normalized for term in ("1 stop", "2 stop", "1stop", "2stop")):
+                continue
+            for raw in re.findall(r"\b(\d{1,3}(?:,\d{3})+)\b", card):
+                value = int(raw.replace(",", ""))
+                if 5_000 <= value <= 150_000:
+                    prices.append(value)
+        if prices:
+            return min(prices)
+        LOG.warning("Yatra: no non-stop price card found")
+        return None
 
     def url(self, origin: str, destination: str, departure: date) -> str:
         stamp = departure.strftime("%d/%m/%Y")
         return ("https://flight.yatra.com/air-search-ui/pwaint_flight/trigger?flex=0&"
                 "viewName=normal&source=fresco-flights&type=O&class=Economy&"
-                "ADT=4&CHD=1&INF=0&noOfSegments=1&"
+                "ADT=4&CHD=1&INF=0&noOfSegments=1&non_stop=1&"
                 f"origin={origin}&originCountry=IN&destination={destination}&"
                 f"destinationCountry=TH&flight_depart_date={stamp}&arrivalDate=")
 
@@ -300,4 +348,4 @@ ALL_PROVIDERS = [
 
 # Only sources that have produced comparable per-passenger prices on Railway
 # belong in the alert rotation. Other providers remain available to diagnostics.
-PROVIDERS = [Cheapflights(), Paytm()]
+PROVIDERS = [Cheapflights(), Paytm(), Yatra()]
