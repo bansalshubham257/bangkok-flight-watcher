@@ -34,12 +34,17 @@ class Provider:
         try:
             await page.goto(search_url, wait_until="domcontentloaded", timeout=60_000)
             await page.wait_for_timeout(7_000)
+            await self.dismiss_overlays(page)
             amount = await self.extract_verified_card_price(page)
             if amount is None:
                 raise RuntimeError(f"No qualifying non-stop flight card found on {self.name}")
             return Fare(amount=amount, source=self.name, url=page.url)
         finally:
             await page.close()
+
+    async def dismiss_overlays(self, page: Page) -> None:
+        """Hook for provider-specific popups. Never raises."""
+        return None
 
     async def extract_verified_card_price(self, page: Page) -> int | None:
         prices: list[int] = []
@@ -68,6 +73,43 @@ class Paytm(Provider):
         return ("https://tickets.paytm.com/flights/flightSearch/"
                 f"{origin}-Bengaluru/{destination}-Bangkok/4/1/0/E/"
                 f"{departure.isoformat()}?referer=search")
+
+    async def dismiss_overlays(self, page: Page) -> None:
+        # Paytm intermittently shows a "Time display options" modal
+        # (12-hour vs 24-hour + "Save Preference") that covers results.
+        # Prefer the affirmative action, fall back to close/Escape.
+        candidates = (
+            # Exact affirmative button from the modal.
+            "button:has-text('Save Preference')",
+            # Generic dialog close controls (cross button).
+            "[aria-label='Close']",
+            "button:has-text('×')",
+            "button:has-text('✕')",
+            "[class*='close' i][role='button']",
+        )
+        try:
+            body = await page.locator("body").inner_text(timeout=5_000)
+            if "time display options" not in body.lower() and "save preference" not in body.lower():
+                return None
+            LOG.info("Paytm time-format popup detected; dismissing")
+        except Exception:
+            pass
+        for selector in candidates:
+            try:
+                locator = page.locator(selector).first
+                await locator.wait_for(state="visible", timeout=3_000)
+                await locator.click(timeout=3_000)
+                LOG.info("Paytm popup dismissed via %s", selector)
+                await page.wait_for_timeout(2_000)
+                return None
+            except Exception:
+                continue
+        try:
+            await page.keyboard.press("Escape")
+            await page.wait_for_timeout(1_500)
+        except Exception:
+            pass
+        return None
 
     async def extract_verified_card_price(self, page: Page) -> int | None:
         # Paytm frequently changes/minifies card class names. Its rendered text
@@ -258,4 +300,4 @@ ALL_PROVIDERS = [
 
 # Only sources that have produced comparable per-passenger prices on Railway
 # belong in the alert rotation. Other providers remain available to diagnostics.
-PROVIDERS = [Cheapflights()]
+PROVIDERS = [Cheapflights(), Paytm()]

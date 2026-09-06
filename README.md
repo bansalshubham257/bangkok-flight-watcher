@@ -4,7 +4,7 @@ Playwright worker for Railway. It watches one-way economy fares from Bangalore
 (`BLR`) to Bangkok (`BKK`) for every Thursday, Friday, and Saturday in October
 2026 and sends Telegram alerts when a fare falls below ₹15,000 or drops by
 ₹500 or more from the last alerted price.
-Every 15 minutes, the bot sends the three cheapest latest non-stop fares with
+Every 7 minutes, the bot sends the three cheapest latest non-stop fares with
 one checked bag requested, including their weekday and date. Fare-site baggage
 data can change at checkout, so alerts instruct the user to verify allowance.
 An unchanged top-three list is not resent; a message is sent when any displayed
@@ -25,8 +25,8 @@ campaign and device-memory parameters are excluded.
 
 ## How it behaves
 
-- Starts a full scan every 15 minutes.
-- Production alerts use Cheapflights. EaseMyTrip is tested using a one-adult
+- Starts a full scan every 7 minutes.
+- Production alerts rotate Cheapflights and Paytm. EaseMyTrip is tested using a one-adult
   query so its displayed amount can be used directly as a per-person fare.
   Other configured sources remain
   available for diagnostics. Amazon and Flipkart are not used.

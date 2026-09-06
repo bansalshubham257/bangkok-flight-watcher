@@ -14,8 +14,8 @@ class Settings:
     destination: str = "BKK"
     drop_rupees: int = 500
     price_threshold: int = 15_000
-    min_delay_seconds: int = 900
-    max_delay_seconds: int = 900
+    min_delay_seconds: int = 420
+    max_delay_seconds: int = 420
     dates_per_run: int = 3
     headless: bool = True
     alert_on_first_seen: bool = True
@@ -36,8 +36,8 @@ class Settings:
             month=int(os.getenv("SEARCH_MONTH", "10")),
             drop_rupees=int(os.getenv("DROP_RUPEES", "500")),
             price_threshold=int(os.getenv("PRICE_THRESHOLD", "15000")),
-            min_delay_seconds=int(os.getenv("MIN_DELAY_SECONDS", "900")),
-            max_delay_seconds=int(os.getenv("MAX_DELAY_SECONDS", "900")),
+            min_delay_seconds=int(os.getenv("MIN_DELAY_SECONDS", "420")),
+            max_delay_seconds=int(os.getenv("MAX_DELAY_SECONDS", "420")),
             dates_per_run=int(os.getenv("DATES_PER_RUN", "3")),
             headless=flag("HEADLESS", True),
             alert_on_first_seen=flag("ALERT_ON_FIRST_SEEN", True),
