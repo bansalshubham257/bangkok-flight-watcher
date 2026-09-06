@@ -317,6 +317,8 @@ class Ixigo(Provider):
 class Cheapflights(Provider):
     name = "Cheapflights"
     card_selectors = ("div.nrc6", "div.nrc6-inner", "[class*='FlightCard']")
+    # Round-trip result pages render slower than one-way pages.
+    load_wait_ms: int = 20_000
 
     def url(self, origin: str, destination: str, departure: date) -> str:
         return (f"https://www.in.cheapflights.com/flight-search/{origin}-{destination}/"
@@ -332,6 +334,21 @@ class Cheapflights(Provider):
             f"{out_date.isoformat()}/{back_date.isoformat()}/"
             "1adults?sort=bestflight_a&fs=stops%3D0"
         )
+
+    async def wait_for_results(self, page: Page) -> None:
+        # Result pages stream cards in; poll (never refresh) for priced
+        # cards before parsing.
+        for _ in range(10):
+            try:
+                body = await page.locator("body").inner_text(timeout=5_000)
+            except Exception:
+                await page.wait_for_timeout(2_000)
+                continue
+            if re.search(r"₹\s*[0-9][0-9,]{3,}", body):
+                return None
+            await page.wait_for_timeout(2_000)
+        LOG.warning("Cheapflights: no priced cards after extended wait")
+        return None
 
     async def search_roundtrip(
         self, browser: Browser, out_city: str, in_city: str,
@@ -349,6 +366,13 @@ class Cheapflights(Provider):
             await page.wait_for_timeout(self.load_wait_ms)
             await self.dismiss_overlays(page)
             await self.wait_for_results(page)
+            try:
+                cards = await page.locator("div.nrc6").count()
+            except Exception:
+                cards = -1
+            LOG.info(
+                "RT page ready: cards=%d url=%s", cards, page.url,
+            )
             amount = await self.extract_openjaw_price(page, out_city, in_city)
             if amount is None:
                 raise RuntimeError(
