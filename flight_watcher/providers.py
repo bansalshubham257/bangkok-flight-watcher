@@ -405,4 +405,4 @@ ALL_PROVIDERS = [
 
 # Only sources that have produced comparable per-passenger prices on Railway
 # belong in the alert rotation. Other providers remain available to diagnostics.
-PROVIDERS = [Cheapflights()]
+PROVIDERS = [Cheapflights(), Paytm()]
