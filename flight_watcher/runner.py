@@ -57,7 +57,11 @@ class FlightWatcher:
         self._send_top_three_summary()
 
     async def diagnose_all_providers(self) -> None:
-        departure = target_dates(self.settings.year, self.settings.month)[0]
+        departure = (
+            date.fromisoformat(self.settings.diagnostic_date)
+            if self.settings.diagnostic_date
+            else target_dates(self.settings.year, self.settings.month)[0]
+        )
         requested = {
             name.strip().lower()
             for name in self.settings.diagnostic_provider.split(",")
