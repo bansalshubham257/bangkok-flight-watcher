@@ -187,7 +187,7 @@ class EaseMyTrip(Provider):
         # EaseMyTrip's supplied Bangkok search uses Don Mueang (DMK).
         return ("https://www.easemytrip.com/flight-search/listing?"
                 f"org={origin}-Bangaluru,%20India&dept=DMK-Bangkok,%20Thailand&"
-                "adt=4&chd=1&inf=0&cabin=0&airline=Any&"
+                "adt=1&chd=0&inf=0&cabin=0&airline=Any&"
                 f"deptDT={stamp}&arrDT=undefined&isOneway=true&isDomestic=false&"
                 "CCODE=IN&curr=INR&apptype=B2C")
 
