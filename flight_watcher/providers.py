@@ -119,19 +119,36 @@ class Paytm(Provider):
         await page.wait_for_timeout(3_000)
 
     async def wait_for_results(self, page: Page) -> None:
+        # Saving the time preference can redirect to /flights while retaining
+        # the populated search form. Submit it once to return to result cards.
+        if "/flightSearch/" not in page.url:
+            try:
+                search = page.get_by_text(
+                    re.compile(r"^\\s*search flights\\s*$", re.I)
+                ).first
+                await search.wait_for(state="visible", timeout=5_000)
+                await search.click(force=True, timeout=5_000)
+                LOG.info("Paytm preserved search form submitted after popup redirect")
+                await page.wait_for_timeout(5_000)
+            except Exception as exc:
+                LOG.warning("Paytm search-form resubmission failed: %s", exc)
+
         for _ in range(20):
             try:
                 body = await page.locator("body").inner_text(timeout=5_000)
                 normalized = body.lower().replace("-", " ")
-                if ("non stop" in normalized or "nonstop" in normalized) and (
-                    "₹" in body or re.search(r"INR\\s*\\d", body, re.I)
-                ):
-                    LOG.info("Paytm results detected")
+                has_fare = bool(
+                    re.search(r"₹\\s*[0-9][0-9,]{3,}", body)
+                    or re.search(r"INR\\s*[0-9][0-9,]{3,}", body, re.I)
+                )
+                has_nonstop = "non stop" in normalized or "nonstop" in normalized
+                if has_nonstop and has_fare and "/flightSearch/" in page.url:
+                    LOG.info("Paytm result cards detected")
                     return None
             except Exception:
                 pass
             await page.wait_for_timeout(2_000)
-        LOG.warning("Paytm results not detected after popup dismissal")
+        LOG.warning("Paytm result cards not detected after popup dismissal")
 
     async def extract_verified_card_price(self, page: Page) -> int | None:
         # Paytm frequently changes/minifies card class names. Its rendered text
