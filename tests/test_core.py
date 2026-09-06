@@ -7,7 +7,7 @@ from flight_watcher.providers import (
     extract_paytm_verified_inr,
     extract_verified_inr,
 )
-from flight_watcher.runner import build_roundtrip_message
+from flight_watcher.runner import build_direction_message
 from flight_watcher.weekends import RoundTrip, october_weekends, roundtrip_matrix
 from flight_watcher.store import Store
 
@@ -98,13 +98,16 @@ def test_openjaw_parser_rejects_stops_and_wrong_cities():
     assert extract_openjaw_inr(stopped, "HKT", "BKK") is None
 
 
-def test_roundtrip_message_shows_buffers_and_cheaper_direction():
-    known = {
-        RoundTrip(date(2026, 10, 3), date(2026, 10, 4), "HKT", "BKK", "base").key: 33_297,
-        RoundTrip(date(2026, 10, 3), date(2026, 10, 4), "BKK", "HKT", "base").key: 31_742,
-        RoundTrip(date(2026, 10, 3), date(2026, 10, 4), "HKT", "BKK", "fri-out").key: 30_000,
-    }
-    message = build_roundtrip_message(known)
-    assert "Out HKT / Back BKK: ₹33,297" in message
-    assert "Fri out ₹30,000 (−₹3,297)" in message
-    assert "Cheaper: B by ₹1,555" in message
+def test_direction_message_shows_buffers_with_day_in_brackets():
+    base = RoundTrip(date(2026, 10, 3), date(2026, 10, 4), "HKT", "BKK", "base")
+    fri = RoundTrip(date(2026, 10, 2), date(2026, 10, 4), "HKT", "BKK", "fri-out")
+    mon = RoundTrip(date(2026, 10, 3), date(2026, 10, 5), "HKT", "BKK", "mon-back")
+    known = {base.key: 33_297, fri.key: 30_000, mon.key: 34_000}
+    message = build_direction_message(known, "HKT", "BKK", "1️⃣")
+    assert "BLR → Phuket, back via Bangkok" in message
+    assert "Sat 03 Oct → Sun 04 Oct: ₹33,297" in message
+    assert "↳ ₹30,000 (Fri 02 Oct out, −₹3,297)" in message
+    assert "↳ ₹34,000 (Mon 05 Oct back, +₹703)" in message
+    other = build_direction_message(known, "BKK", "HKT", "2️⃣")
+    assert "BLR → Bangkok, back via Phuket" in other
+    assert "checking…" in other

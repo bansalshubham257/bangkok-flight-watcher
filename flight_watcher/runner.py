@@ -1,4 +1,5 @@
 import logging
+from datetime import timedelta
 
 from playwright.async_api import async_playwright
 
@@ -11,55 +12,54 @@ from .weekends import RoundTrip, october_weekends, roundtrip_matrix
 
 LOG = logging.getLogger(__name__)
 
-BUFFER_LABELS = (
-    ("fri-out", "Fri out"),
-    ("thu-out", "Thu out"),
-    ("mon-back", "Mon back"),
-    ("tue-back", "Tue back"),
+BUFFER_DELTAS = (
+    ("fri-out", -1, "out"),
+    ("thu-out", -2, "out"),
+    ("mon-back", +1, "back"),
+    ("tue-back", +2, "back"),
 )
 
 
-def build_roundtrip_message(known: dict[str, int]) -> str:
-    """Single Telegram summary: every October weekend, both open-jaw
-    directions, and one-side buffer alternatives with savings vs base."""
-    lines = ["🔁 BLR ⇄ Phuket/Bangkok · RT per person (1 adult, direct both legs)"]
+def build_direction_message(
+    known: dict[str, int], out_city: str, in_city: str, title: str,
+) -> str:
+    """One message per direction: every weekend base price plus buffer
+    alternatives with the buffered day in brackets and savings vs base."""
+    out_name = "Phuket" if out_city == "HKT" else "Bangkok"
+    back_name = "Bangkok" if in_city == "BKK" else "Phuket"
+    lines = [f"{title} BLR → {out_name}, back via {back_name} · RT per person (1 adult, direct)"]
     for saturday, sunday in october_weekends():
-        lines.append(f"\n📅 {saturday:%a %d %b} → {sunday:%a %d %b}")
-        bases: dict[str, int] = {}
-        for out_city, in_city, tag in (("HKT", "BKK", "A"), ("BKK", "HKT", "B")):
-            base = known.get(
-                RoundTrip(saturday, sunday, out_city, in_city, "base").key
-            )
-            if base is not None:
-                bases[tag] = base
-            buffers = []
-            for label, short in BUFFER_LABELS:
-                price = known.get(
-                    RoundTrip(saturday, sunday, out_city, in_city, label).key
+        base = known.get(
+            RoundTrip(saturday, sunday, out_city, in_city, "base").key
+        )
+        base_text = f"₹{base:,}" if base is not None else "checking…"
+        lines.append(f"\n📅 {saturday:%a %d %b} → {sunday:%a %d %b}: {base_text}")
+        for label, delta, leg in BUFFER_DELTAS:
+            if leg == "out":
+                combo = RoundTrip(
+                    saturday + timedelta(days=delta), sunday,
+                    out_city, in_city, label,
                 )
-                if price is None:
-                    buffers.append(f"{short} …")
-                elif base is None:
-                    buffers.append(f"{short} ₹{price:,}")
-                else:
-                    diff = base - price
-                    if diff > 0:
-                        buffers.append(f"{short} ₹{price:,} (−₹{diff:,})")
-                    elif diff < 0:
-                        buffers.append(f"{short} ₹{price:,} (+₹{-diff:,})")
-                    else:
-                        buffers.append(f"{short} ₹{price:,} (=)")
-            base_text = f"₹{base:,}" if base is not None else "checking…"
-            lines.append(f"  {tag} Out {out_city} / Back {in_city}: {base_text}")
-            lines.append(f"    buffers: {' · '.join(buffers)}")
-        if len(bases) == 2:
-            if bases["A"] < bases["B"]:
-                lines.append(f"  ✅ Cheaper: A by ₹{bases['B'] - bases['A']:,}")
-            elif bases["B"] < bases["A"]:
-                lines.append(f"  ✅ Cheaper: B by ₹{bases['A'] - bases['B']:,}")
+                day = combo.out_date
             else:
-                lines.append("  ✅ A and B cost the same")
-    lines.append("\nPrices refresh round-robin; verify final price before booking.")
+                combo = RoundTrip(
+                    saturday, sunday + timedelta(days=delta),
+                    out_city, in_city, label,
+                )
+                day = combo.back_date
+            price = known.get(combo.key)
+            if price is None:
+                continue
+            if base is None:
+                lines.append(f"  ↳ ₹{price:,} ({day:%a %d %b} {leg})")
+            else:
+                diff = base - price
+                if diff > 0:
+                    lines.append(f"  ↳ ₹{price:,} ({day:%a %d %b} {leg}, −₹{diff:,})")
+                elif diff < 0:
+                    lines.append(f"  ↳ ₹{price:,} ({day:%a %d %b} {leg}, +₹{-diff:,})")
+                else:
+                    lines.append(f"  ↳ ₹{price:,} ({day:%a %d %b} {leg}, =)")
     return "\n".join(lines)
 
 
@@ -103,7 +103,12 @@ class FlightWatcher:
             except Exception as exc:
                 LOG.warning("RT failed for %s: %s", combo.key, exc)
 
-        self.telegram.send(build_roundtrip_message(self.store.all_roundtrips()))
+        known = self.store.all_roundtrips()
+        self.telegram.send(build_direction_message(known, "HKT", "BKK", "1️⃣"))
+        self.telegram.send(
+            build_direction_message(known, "BKK", "HKT", "2️⃣")
+            + "\n\nPrices refresh round-robin; verify final price before booking."
+        )
 
     async def diagnose_all_providers(self) -> None:
         from datetime import date
