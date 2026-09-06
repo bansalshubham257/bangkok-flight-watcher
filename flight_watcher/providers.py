@@ -81,6 +81,9 @@ class Paytm(Provider):
                 f"{departure.isoformat()}?referer=search")
 
     async def dismiss_overlays(self, page: Page) -> None:
+        # Preserve the direct result URL. Saving the preference may redirect to
+        # /flights; reopening this URL then reuses the preference cookie.
+        result_url = page.url
         # The control is sometimes a div/span rather than a real button.
         try:
             body = await page.locator("body").inner_text(timeout=5_000)
@@ -103,6 +106,12 @@ class Paytm(Provider):
                 await locator.click(force=True, timeout=5_000)
                 LOG.info("Paytm popup dismissed")
                 await page.wait_for_timeout(3_000)
+                if "/flightSearch/" not in page.url and "/flightSearch/" in result_url:
+                    LOG.info("Paytm reopening original result URL after preference save")
+                    await page.goto(
+                        result_url, wait_until="domcontentloaded", timeout=60_000
+                    )
+                    await page.wait_for_timeout(7_000)
                 return None
             except Exception:
                 continue
@@ -117,6 +126,10 @@ class Paytm(Provider):
         }""")
         LOG.info("Paytm popup JavaScript dismissal=%s", clicked)
         await page.wait_for_timeout(3_000)
+        if clicked and "/flightSearch/" not in page.url and "/flightSearch/" in result_url:
+            LOG.info("Paytm reopening original result URL after JavaScript dismissal")
+            await page.goto(result_url, wait_until="domcontentloaded", timeout=60_000)
+            await page.wait_for_timeout(7_000)
 
     async def wait_for_results(self, page: Page) -> None:
         # Saving the time preference can redirect to /flights while retaining
