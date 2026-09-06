@@ -14,9 +14,10 @@ class Settings:
     destination: str = "BKK"
     drop_rupees: int = 500
     price_threshold: int = 15_000
-    min_delay_seconds: int = 420
-    max_delay_seconds: int = 420
+    min_delay_seconds: int = 300
+    max_delay_seconds: int = 300
     dates_per_run: int = 3
+    roundtrips_per_run: int = 8
     headless: bool = True
     alert_on_first_seen: bool = True
     diagnostic_all_providers: bool = False
@@ -36,9 +37,10 @@ class Settings:
             month=int(os.getenv("SEARCH_MONTH", "10")),
             drop_rupees=int(os.getenv("DROP_RUPEES", "500")),
             price_threshold=int(os.getenv("PRICE_THRESHOLD", "15000")),
-            min_delay_seconds=int(os.getenv("MIN_DELAY_SECONDS", "420")),
-            max_delay_seconds=int(os.getenv("MAX_DELAY_SECONDS", "420")),
+            min_delay_seconds=int(os.getenv("MIN_DELAY_SECONDS", "300")),
+            max_delay_seconds=int(os.getenv("MAX_DELAY_SECONDS", "300")),
             dates_per_run=int(os.getenv("DATES_PER_RUN", "3")),
+            roundtrips_per_run=int(os.getenv("RT_PER_RUN", "8")),
             headless=flag("HEADLESS", True),
             alert_on_first_seen=flag("ALERT_ON_FIRST_SEEN", True),
             diagnostic_all_providers=flag("DIAGNOSTIC_ALL_PROVIDERS", False),

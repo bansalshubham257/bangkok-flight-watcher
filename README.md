@@ -1,14 +1,13 @@
 # Bangkok Flight Watcher
 
-Playwright worker for Railway. It watches one-way economy fares from Bangalore
-(`BLR`) to Bangkok (`BKK`) for every Thursday, Friday, and Saturday in October
-2026 and sends Telegram alerts when a fare falls below ₹15,000 or drops by
-₹500 or more from the last alerted price.
-Every 7 minutes, the bot sends the three cheapest latest non-stop fares with
-one checked bag requested, including their weekday and date. Fare-site baggage
-data can change at checkout, so alerts instruct the user to verify allowance.
-An unchanged top-three list is not resent; a message is sent when any displayed
-date or price changes.
+Playwright worker for Railway. It watches open-jaw round-trip fares from
+Bangalore (`BLR`) to Phuket (`HKT`) and Bangkok (`BKK`) for every October 2026
+weekend (Saturday out, Sunday back, 1 adult, direct flights only) and sends a
+single Telegram summary every 5 minutes with per-person prices.
+Two directions are compared: out via Phuket back via Bangkok, and out via
+Bangkok back via Phuket. One-side buffer alternatives (outbound Friday or
+Thursday, return Monday or Tuesday) show how much cheaper each option is
+versus the Saturday/Sunday base.
 
 For safety, a price is accepted only from an individual flight-result card that
 shows non-stop/direct travel. Missing baggage text is treated as included; a
@@ -25,9 +24,11 @@ campaign and device-memory parameters are excluded.
 
 ## How it behaves
 
-- Starts a full scan every 7 minutes.
-- Production alerts rotate Cheapflights and Paytm. EaseMyTrip is tested using a one-adult
-  query so its displayed amount can be used directly as a per-person fare.
+- Starts a full scan every 5 minutes (8 round trips per run, round-robin).
+- Production alerts use Cheapflights open-jaw search with the direct-only
+  filter (`fs=stops=0`). A card counts only when leg 1 is BLR → outbound city
+  direct and leg 2 is inbound city → BLR direct. Paytm and Yatra remain
+  available for diagnostics.
   Other configured sources remain
   available for diagnostics. Amazon and Flipkart are not used.
   safely.

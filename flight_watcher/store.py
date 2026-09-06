@@ -33,6 +33,11 @@ class Store:
                 name TEXT PRIMARY KEY,
                 payload TEXT NOT NULL
             );
+            CREATE TABLE IF NOT EXISTS roundtrips (
+                combo TEXT PRIMARY KEY,
+                price INTEGER NOT NULL,
+                checked_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+            );
         """)
 
     def get_price(self, departure: str) -> PriceState | None:
@@ -81,6 +86,20 @@ class Store:
         )
         self.connection.commit()
         return current
+
+    def save_roundtrip(self, combo: str, price: int) -> None:
+        self.connection.execute("""
+            INSERT INTO roundtrips(combo,price)
+            VALUES(?,?)
+            ON CONFLICT(combo) DO UPDATE SET
+              price=excluded.price, checked_at=CURRENT_TIMESTAMP
+        """, (combo, price))
+        self.connection.commit()
+
+    def all_roundtrips(self) -> dict[str, int]:
+        return dict(self.connection.execute(
+            "SELECT combo, price FROM roundtrips"
+        ).fetchall())
 
     def close(self) -> None:
         self.connection.close()

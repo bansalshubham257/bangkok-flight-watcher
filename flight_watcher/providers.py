@@ -322,6 +322,62 @@ class Cheapflights(Provider):
         return (f"https://www.in.cheapflights.com/flight-search/{origin}-{destination}/"
                 f"{departure.isoformat()}/4adults/children-3?sort=bestflight_a&fs=stops%3D0")
 
+    def roundtrip_url(
+        self, out_city: str, in_city: str, out_date: date, back_date: date,
+    ) -> str:
+        # Open-jaw: BLR -> out_city, then in_city -> BLR, 1 adult, direct only.
+        return (
+            "https://www.in.cheapflights.com/flight-search/"
+            f"BLR-{out_city},{in_city}-BLR/"
+            f"{out_date.isoformat()}/{back_date.isoformat()}/"
+            "1adults?sort=bestflight_a&fs=stops%3D0"
+        )
+
+    async def search_roundtrip(
+        self, browser: Browser, out_city: str, in_city: str,
+        out_date: date, back_date: date,
+    ) -> Fare:
+        page = await browser.new_page(
+            locale="en-IN",
+            timezone_id="Asia/Kolkata",
+            user_agent=("Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 "
+                        "(KHTML, like Gecko) Chrome/126.0 Safari/537.36"),
+        )
+        search_url = self.roundtrip_url(out_city, in_city, out_date, back_date)
+        try:
+            await page.goto(search_url, wait_until="domcontentloaded", timeout=60_000)
+            await page.wait_for_timeout(self.load_wait_ms)
+            await self.dismiss_overlays(page)
+            await self.wait_for_results(page)
+            amount = await self.extract_openjaw_price(page, out_city, in_city)
+            if amount is None:
+                raise RuntimeError(
+                    f"No qualifying direct open-jaw card on {self.name} "
+                    f"BLR->{out_city}/{in_city}->BLR"
+                )
+            return Fare(amount=amount, source=self.name, url=page.url)
+        finally:
+            await page.close()
+
+    async def extract_openjaw_price(
+        self, page: Page, out_city: str, in_city: str,
+    ) -> int | None:
+        # Each itinerary card lists both legs with a combined total. Accept a
+        # card only when leg 1 is BLR -> out_city DIRECT and leg 2 is
+        # in_city -> BLR DIRECT (display order varies; same-city round trips
+        # and wrong combos are rejected).
+        prices: list[int] = []
+        cards = page.locator("div.nrc6")
+        for index in range(await cards.count()):
+            try:
+                text = await cards.nth(index).inner_text(timeout=5_000)
+            except Exception:
+                continue
+            amount = extract_openjaw_inr(text, out_city, in_city)
+            if amount is not None:
+                prices.append(amount)
+        return min(prices) if prices else None
+
 
 class EaseMyTrip(Provider):
     name = "EaseMyTrip"
@@ -396,6 +452,32 @@ def extract_paytm_verified_inr(text: str) -> int | None:
             prices.append(amount)
         previous_price_index = index
     return min(prices) if prices else None
+
+
+def extract_openjaw_inr(text: str, out_city: str, in_city: str) -> int | None:
+    """Cheapest combined total from one open-jaw itinerary card.
+
+    The card must contain exactly the two requested legs with direct/nonstop
+    travel: BLR -> out_city and in_city -> BLR, in any display order. Cards
+    with stops, stopovers, or different city pairs are rejected.
+    """
+    legs = re.findall(
+        r"([A-Z]{3})[A-Za-z ]*\n-\n([A-Z]{3})[^\n]*\n([^\n]+)", text
+    )
+    if len(legs) != 2:
+        return None
+    wanted = {("BLR", out_city), (in_city, "BLR")}
+    seen = set()
+    for origin, destination, stops in legs:
+        marker = " ".join(stops.lower().replace("-", " ").split())
+        if not any(term in marker for term in ("direct", "nonstop", "non stop")):
+            return None
+        if any(term in marker for term in ("1 stop", "2 stop", "stopover")):
+            return None
+        seen.add((origin, destination))
+    if seen != wanted:
+        return None
+    return extract_lowest_inr(text)
 
 
 ALL_PROVIDERS = [

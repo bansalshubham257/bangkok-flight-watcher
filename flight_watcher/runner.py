@@ -1,15 +1,66 @@
 import logging
-from datetime import date
 
 from playwright.async_api import async_playwright
 
 from .config import Settings
 from .dates import target_dates
-from .providers import ALL_PROVIDERS, PROVIDERS
+from .providers import ALL_PROVIDERS, Cheapflights
 from .store import Store
 from .telegram import Telegram
+from .weekends import RoundTrip, october_weekends, roundtrip_matrix
 
 LOG = logging.getLogger(__name__)
+
+BUFFER_LABELS = (
+    ("fri-out", "Fri out"),
+    ("thu-out", "Thu out"),
+    ("mon-back", "Mon back"),
+    ("tue-back", "Tue back"),
+)
+
+
+def build_roundtrip_message(known: dict[str, int]) -> str:
+    """Single Telegram summary: every October weekend, both open-jaw
+    directions, and one-side buffer alternatives with savings vs base."""
+    lines = ["🔁 BLR ⇄ Phuket/Bangkok · RT per person (1 adult, direct both legs)"]
+    for saturday, sunday in october_weekends():
+        lines.append(f"\n📅 {saturday:%a %d %b} → {sunday:%a %d %b}")
+        bases: dict[str, int] = {}
+        for out_city, in_city, tag in (("HKT", "BKK", "A"), ("BKK", "HKT", "B")):
+            base = known.get(
+                RoundTrip(saturday, sunday, out_city, in_city, "base").key
+            )
+            if base is not None:
+                bases[tag] = base
+            buffers = []
+            for label, short in BUFFER_LABELS:
+                price = known.get(
+                    RoundTrip(saturday, sunday, out_city, in_city, label).key
+                )
+                if price is None:
+                    buffers.append(f"{short} …")
+                elif base is None:
+                    buffers.append(f"{short} ₹{price:,}")
+                else:
+                    diff = base - price
+                    if diff > 0:
+                        buffers.append(f"{short} ₹{price:,} (−₹{diff:,})")
+                    elif diff < 0:
+                        buffers.append(f"{short} ₹{price:,} (+₹{-diff:,})")
+                    else:
+                        buffers.append(f"{short} ₹{price:,} (=)")
+            base_text = f"₹{base:,}" if base is not None else "checking…"
+            lines.append(f"  {tag} Out {out_city} / Back {in_city}: {base_text}")
+            lines.append(f"    buffers: {' · '.join(buffers)}")
+        if len(bases) == 2:
+            if bases["A"] < bases["B"]:
+                lines.append(f"  ✅ Cheaper: A by ₹{bases['B'] - bases['A']:,}")
+            elif bases["B"] < bases["A"]:
+                lines.append(f"  ✅ Cheaper: B by ₹{bases['A'] - bases['B']:,}")
+            else:
+                lines.append("  ✅ A and B cost the same")
+    lines.append("\nPrices refresh round-robin; verify final price before booking.")
+    return "\n".join(lines)
 
 
 class FlightWatcher:
@@ -35,28 +86,28 @@ class FlightWatcher:
         self.store.close()
 
     async def run_once(self) -> None:
-        dates = target_dates(self.settings.year, self.settings.month)
-        provider = PROVIDERS[self.store.next_index("provider", len(PROVIDERS))]
-        start = self.store.next_index("date", len(dates), self.settings.dates_per_run)
-        selected = [dates[(start + i) % len(dates)] for i in range(min(self.settings.dates_per_run, len(dates)))]
-        LOG.info("Scanning %s with %s", ", ".join(map(str, selected)), provider.name)
+        combos = roundtrip_matrix()
+        provider = Cheapflights()
+        batch = max(1, self.settings.roundtrips_per_run)
+        start = self.store.next_index("rt", len(combos), batch)
+        selected = [combos[(start + i) % len(combos)] for i in range(min(batch, len(combos)))]
+        LOG.info("Scanning %d round trips from %s", len(selected), selected[0].key)
 
-        for departure in selected:
+        for combo in selected:
             try:
-                fare = await provider.search(
-                    self.browser, self.settings.origin, self.settings.destination, departure
+                fare = await provider.search_roundtrip(
+                    self.browser, combo.out_city, combo.in_city,
+                    combo.out_date, combo.back_date,
                 )
-                self._process(departure.isoformat(), fare.amount, fare.source, fare.url)
+                self.store.save_roundtrip(combo.key, fare.amount)
             except Exception as exc:
-                LOG.warning("%s failed for %s: %s", provider.name, departure, exc)
-                error = str(exc)
-                if "ERR_HTTP2_PROTOCOL_ERROR" in error or "Page.goto: Timeout" in error:
-                    LOG.warning("%s is blocked at network level; skipping remaining dates", provider.name)
-                    break
+                LOG.warning("RT failed for %s: %s", combo.key, exc)
 
-        self._send_top_three_summary()
+        self.telegram.send(build_roundtrip_message(self.store.all_roundtrips()))
 
     async def diagnose_all_providers(self) -> None:
+        from datetime import date
+
         departure = (
             date.fromisoformat(self.settings.diagnostic_date)
             if self.settings.diagnostic_date
@@ -84,58 +135,3 @@ class FlightWatcher:
             except Exception as exc:
                 LOG.warning("DIAGNOSTIC_FAIL provider=%s reason=%s", provider.name, exc)
         LOG.info("DIAGNOSTIC_DONE")
-
-    def _process(self, departure: str, price: int, source: str, url: str) -> None:
-        parsed_date = date.fromisoformat(departure)
-        display_date = f"{parsed_date:%A}, {parsed_date.day} {parsed_date:%B %Y}"
-        previous = self.store.get_price(departure)
-        if previous is None:
-            self.store.save_price(departure, price, price, source)
-            if price < self.settings.price_threshold:
-                self.telegram.send(
-                    f"🔥 Non-stop fare below ₹{self.settings.price_threshold:,}\n"
-                    f"BLR → Bangkok on {display_date}\n"
-                    f"Current price: ₹{price:,}\nSource: {source}\n{url}"
-                    "\nChecked bag requested—verify allowance before booking."
-                )
-            elif self.settings.alert_on_first_seen:
-                self.telegram.send(
-                    f"✈️ Initial fare: BLR → Bangkok\n{display_date}: ₹{price:,}\nSource: {source}\n{url}"
-                )
-            return
-
-        if price < self.settings.price_threshold <= previous.last_price:
-            self.telegram.send(
-                f"🔥 Non-stop fare crossed below ₹{self.settings.price_threshold:,}\n"
-                f"BLR → Bangkok on {display_date}\n"
-                f"Current price: ₹{price:,}\nSource: {source}\n{url}"
-                "\nChecked bag requested—verify allowance before booking."
-            )
-
-        drop = previous.alert_anchor - price
-        anchor = previous.alert_anchor
-        if drop >= self.settings.drop_rupees:
-            self.telegram.send(
-                f"🔻 Flight price dropped ₹{drop:,}\nBLR → Bangkok on {display_date}\n"
-                f"Was ₹{previous.alert_anchor:,}, now ₹{price:,}\nSource: {source}\n{url}"
-                "\nNon-stop + checked bag requested; verify before booking."
-            )
-            anchor = price
-        self.store.save_price(departure, price, anchor, source)
-
-    def _send_top_three_summary(self) -> None:
-        prices = self.store.all_prices()
-        if not prices:
-            return
-        cheapest = sorted(prices, key=lambda row: row[1])[:3]
-        signature = [(departure, price) for departure, price, _source in cheapest]
-        if not self.store.summary_changed("top_three", signature):
-            LOG.info("Top 3 dates and prices unchanged; Telegram summary skipped")
-            return
-        lines = ["🏆 Top 3 non-stop BLR → Bangkok fares (1 checked bag requested)"]
-        for rank, (departure, price, source) in enumerate(cheapest, start=1):
-            parsed = date.fromisoformat(departure)
-            lines.append(
-                f"{rank}. {parsed:%A}, {parsed.day} {parsed:%B %Y}: ₹{price:,} ({source})"
-            )
-        self.telegram.send("\n".join(lines))
