@@ -123,11 +123,18 @@ class Paytm(Provider):
         # the populated search form. Submit it once to return to result cards.
         if "/flightSearch/" not in page.url:
             try:
-                search = page.get_by_text(
+                searches = page.get_by_text(
                     re.compile(r"^\\s*search flights\\s*$", re.I)
-                ).first
-                await search.wait_for(state="visible", timeout=5_000)
-                await search.click(force=True, timeout=5_000)
+                )
+                clicked = False
+                for index in range(await searches.count()):
+                    candidate = searches.nth(index)
+                    if await candidate.is_visible():
+                        await candidate.click(force=True, timeout=5_000)
+                        clicked = True
+                        break
+                if not clicked:
+                    raise RuntimeError("no visible Search Flights control")
                 LOG.info("Paytm preserved search form submitted after popup redirect")
                 await page.wait_for_timeout(5_000)
             except Exception as exc:
@@ -151,6 +158,10 @@ class Paytm(Provider):
         LOG.warning("Paytm result cards not detected after popup dismissal")
 
     async def extract_verified_card_price(self, page: Page) -> int | None:
+        # Never parse promotional prices from Paytm's generic flights homepage.
+        if "/flightSearch/" not in page.url:
+            LOG.warning("Paytm rejected non-results URL: %s", page.url)
+            return None
         # Paytm frequently changes/minifies card class names. Its rendered text
         # remains structured: each card's price follows its stops and baggage
         # lines. Associate each price only with a tight preceding line window.
