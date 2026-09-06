@@ -26,8 +26,8 @@ campaign and device-memory parameters are excluded.
 ## How it behaves
 
 - Starts a full scan every 15 minutes.
-- Production alerts rotate Cheapflights and EaseMyTrip. EaseMyTrip's displayed
-  five-traveller total is divided by five for an approximate per-person fare.
+- Production alerts use Cheapflights. EaseMyTrip is excluded because it renders
+  a combined five-traveller total that is not safely comparable per passenger.
   Other configured sources remain
   available for diagnostics. Amazon and Flipkart are not used.
   safely.
