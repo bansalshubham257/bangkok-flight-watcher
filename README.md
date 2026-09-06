@@ -69,6 +69,7 @@ python app.py
    can disappear on redeploy.
 3. Add all variables from `.env.example`; replace the two Telegram values.
 4. Deploy. The included Dockerfile installs Chromium and starts the worker.
+   Keep the service Watch Paths empty so every push auto-deploys.
 
 Railway may charge for continuous execution and browser memory. The worker is
 not affiliated with the flight sites; comply with their terms and robots rules.
