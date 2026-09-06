@@ -191,15 +191,6 @@ class EaseMyTrip(Provider):
                 f"deptDT={stamp}&arrDT=undefined&isOneway=true&isDomestic=false&"
                 "CCODE=IN&curr=INR&apptype=B2C")
 
-    async def extract_verified_card_price(self, page: Page) -> int | None:
-        total = await super().extract_verified_card_price(page)
-        if total is None:
-            return None
-        # This search is for 4 adults + 1 child and EaseMyTrip renders the
-        # combined party total. Store a rounded per-traveller comparison fare.
-        return round(total / 5)
-
-
 def extract_lowest_inr(text: str) -> int | None:
     # Flight pages usually render prices as ₹12,345 or INR 12,345. Ignore tiny
     # ancillary amounts and implausibly large values.
@@ -267,4 +258,4 @@ ALL_PROVIDERS = [
 
 # Only sources that have produced comparable per-passenger prices on Railway
 # belong in the alert rotation. Other providers remain available to diagnostics.
-PROVIDERS = [Cheapflights(), EaseMyTrip()]
+PROVIDERS = [Cheapflights()]
