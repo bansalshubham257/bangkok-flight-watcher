@@ -81,41 +81,57 @@ class Paytm(Provider):
                 f"{departure.isoformat()}?referer=search")
 
     async def dismiss_overlays(self, page: Page) -> None:
-        # Paytm intermittently shows a "Time display options" modal
-        # (12-hour vs 24-hour + "Save Preference") that covers results.
-        # Prefer the affirmative action, fall back to close/Escape.
-        candidates = (
-            # Exact affirmative button from the modal.
-            "button:has-text('Save Preference')",
-            # Generic dialog close controls (cross button).
-            "[aria-label='Close']",
-            "button:has-text('×')",
-            "button:has-text('✕')",
-            "[class*='close' i][role='button']",
-        )
+        # The control is sometimes a div/span rather than a real button.
         try:
             body = await page.locator("body").inner_text(timeout=5_000)
             if "time display options" not in body.lower() and "save preference" not in body.lower():
                 return None
             LOG.info("Paytm time-format popup detected; dismissing")
         except Exception:
-            pass
-        for selector in candidates:
+            return None
+
+        candidates = (
+            page.get_by_role("button", name=re.compile(r"save preference", re.I)).first,
+            page.get_by_text(re.compile(r"^\\s*save preference\\s*$", re.I)).first,
+            page.locator("text=Save Preference").first,
+            page.locator("[aria-label='Close']").first,
+            page.locator("[class*='close' i]").first,
+        )
+        for locator in candidates:
             try:
-                locator = page.locator(selector).first
                 await locator.wait_for(state="visible", timeout=3_000)
-                await locator.click(timeout=3_000)
-                LOG.info("Paytm popup dismissed via %s", selector)
-                await page.wait_for_timeout(2_000)
+                await locator.click(force=True, timeout=5_000)
+                LOG.info("Paytm popup dismissed")
+                await page.wait_for_timeout(3_000)
                 return None
             except Exception:
                 continue
-        try:
-            await page.keyboard.press("Escape")
-            await page.wait_for_timeout(1_500)
-        except Exception:
-            pass
-        return None
+
+        clicked = await page.evaluate("""() => {
+            const nodes = [...document.querySelectorAll('button, div, span, a')];
+            const target = nodes.find(el =>
+                (el.textContent || '').trim().toLowerCase() === 'save preference');
+            if (!target) return false;
+            target.click();
+            return true;
+        }""")
+        LOG.info("Paytm popup JavaScript dismissal=%s", clicked)
+        await page.wait_for_timeout(3_000)
+
+    async def wait_for_results(self, page: Page) -> None:
+        for _ in range(20):
+            try:
+                body = await page.locator("body").inner_text(timeout=5_000)
+                normalized = body.lower().replace("-", " ")
+                if ("non stop" in normalized or "nonstop" in normalized) and (
+                    "₹" in body or re.search(r"INR\\s*\\d", body, re.I)
+                ):
+                    LOG.info("Paytm results detected")
+                    return None
+            except Exception:
+                pass
+            await page.wait_for_timeout(2_000)
+        LOG.warning("Paytm results not detected after popup dismissal")
 
     async def extract_verified_card_price(self, page: Page) -> int | None:
         # Paytm frequently changes/minifies card class names. Its rendered text
