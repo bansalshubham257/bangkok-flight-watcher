@@ -26,8 +26,8 @@ campaign and device-memory parameters are excluded.
 ## How it behaves
 
 - Starts a full scan every 15 minutes.
-- Production alerts use Cheapflights. EaseMyTrip is excluded because it renders
-  a combined five-traveller total that is not safely comparable per passenger.
+- Production alerts use Cheapflights. EaseMyTrip is tested using a one-adult
+  query so its displayed amount can be used directly as a per-person fare.
   Other configured sources remain
   available for diagnostics. Amazon and Flipkart are not used.
   safely.
